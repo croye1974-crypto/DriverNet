@@ -2,12 +2,15 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, Clock, MessageCircle } from "lucide-react";
+import MatchedDrivers from "./MatchedDrivers";
 
 interface LiftRequestCardProps {
   id: string;
   requesterName: string;
   requesterAvatar?: string;
   fromLocation: string;
+  fromLat?: number;
+  fromLng?: number;
   toLocation: string;
   requestedTime: string;
   postedTime: string;
@@ -20,6 +23,8 @@ export default function LiftRequestCard({
   requesterName,
   requesterAvatar,
   fromLocation,
+  fromLat,
+  fromLng,
   toLocation,
   requestedTime,
   postedTime,
@@ -70,22 +75,31 @@ export default function LiftRequestCard({
             <span data-testid={`text-time-${id}`}>Needs lift at {requestedTime}</span>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              onClick={() => onOffer?.(id)}
-              data-testid={`button-offer-lift-${id}`}
-            >
-              Offer Lift
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => onMessage?.(id)}
-              data-testid={`button-message-${id}`}
-            >
-              <MessageCircle className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2">
+            {fromLat !== undefined && fromLng !== undefined && (
+              <MatchedDrivers 
+                requestLat={fromLat} 
+                requestLng={fromLng} 
+                requestId={id} 
+              />
+            )}
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => onOffer?.(id)}
+                data-testid={`button-offer-lift-${id}`}
+              >
+                Offer Lift
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => onMessage?.(id)}
+                data-testid={`button-message-${id}`}
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
