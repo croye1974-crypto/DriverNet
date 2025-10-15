@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { 
   insertScheduleSchema, 
@@ -166,6 +167,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng
       );
 
+      // Broadcast check-in notification to all connected clients
+      const schedule = await storage.getSchedule(job.scheduleId);
+      if (schedule) {
+        const driver = await storage.getUser(schedule.userId);
+        if (driver) {
+          (app as any).broadcastNotification({
+            type: 'driver-check-in',
+            driverId: driver.id,
+            driverName: driver.name,
+            jobId: updatedJob.id,
+            location: updatedJob.fromLocation,
+            lat,
+            lng,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
       res.json(updatedJob);
     } catch (error) {
       if (error instanceof Error && error.name === "ZodError") {
@@ -200,6 +219,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lat,
         lng
       );
+
+      // Broadcast check-out notification to all connected clients
+      const schedule = await storage.getSchedule(job.scheduleId);
+      if (schedule) {
+        const driver = await storage.getUser(schedule.userId);
+        if (driver) {
+          (app as any).broadcastNotification({
+            type: 'driver-check-out',
+            driverId: driver.id,
+            driverName: driver.name,
+            jobId: updatedJob.id,
+            location: updatedJob.toLocation,
+            lat,
+            lng,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
 
       res.json(updatedJob);
     } catch (error) {
@@ -466,7 +503,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:userId/last-location", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const schedules = await storage.getSchedulesByUserId(userId);
+      
+      let lastLocation: { lat: number; lng: number; location: string; timestamp: string } | null = null;
+      let latestTime: Date | null = null;
+
+      for (const schedule of schedules) {
+        const jobs = await storage.getJobsByScheduleId(schedule.id);
+        
+        for (const job of jobs) {
+          if (job.checkOutLat !== null && job.checkOutLng !== null && job.actualEndTime) {
+            const time = new Date(job.actualEndTime);
+            if (!latestTime || time > latestTime) {
+              latestTime = time;
+              lastLocation = {
+                lat: job.checkOutLat,
+                lng: job.checkOutLng,
+                location: job.toLocation,
+                timestamp: job.actualEndTime,
+              };
+            }
+          }
+          
+          if (job.checkInLat !== null && job.checkInLng !== null && job.actualStartTime) {
+            const time = new Date(job.actualStartTime);
+            if (!latestTime || time > latestTime) {
+              latestTime = time;
+              lastLocation = {
+                lat: job.checkInLat,
+                lng: job.checkInLng,
+                location: job.fromLocation,
+                timestamp: job.actualStartTime,
+              };
+            }
+          }
+        }
+      }
+
+      res.json(lastLocation);
+    } catch (error) {
+      console.error("Get last location error:", error);
+      res.status(500).json({ error: "Failed to get last location" });
+    }
+  });
+
   const httpServer = createServer(app);
+
+  // WebSocket server for real-time notifications
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('Client connected to WebSocket');
+    
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        console.log('Received WebSocket message:', message);
+      } catch (error) {
+        console.error('Invalid WebSocket message:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      console.log('Client disconnected from WebSocket');
+    });
+  });
+
+  // Broadcast function to notify all connected clients
+  function broadcastNotification(notification: any) {
+    const message = JSON.stringify(notification);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+
+  // Store broadcast function for use in routes
+  (app as any).broadcastNotification = broadcastNotification;
 
   return httpServer;
 }

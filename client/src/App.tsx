@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
 import ThemeToggle from "@/components/ThemeToggle";
+import DriverNotifications from "@/components/DriverNotifications";
 import FindLifts from "@/pages/FindLifts";
 import Schedule from "@/pages/Schedule";
 import Messages from "@/pages/Messages";
@@ -12,8 +13,22 @@ import Profile from "@/pages/Profile";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function App() {
+interface LastLocation {
+  lat: number;
+  lng: number;
+  location: string;
+  timestamp: string;
+}
+
+function AppContent() {
   const [activeTab, setActiveTab] = useState<"find" | "schedule" | "messages" | "profile">("schedule");
+  const currentUserId = "user-1"; // Mock - will be replaced with real auth
+
+  // Fetch current user's last location for proximity notifications
+  const { data: lastLocation } = useQuery<LastLocation | null>({
+    queryKey: ["/api/users", currentUserId, "last-location"],
+    refetchInterval: 60000, // Refresh every minute
+  });
 
   const renderPage = () => {
     switch (activeTab) {
@@ -31,31 +46,43 @@ function App() {
   };
 
   return (
+    <div className="h-screen flex flex-col bg-background">
+      <header className="flex items-center justify-between p-4 border-b bg-card">
+        <h1 className="text-xl font-bold text-primary" data-testid="text-app-title">
+          DriverLift
+        </h1>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" data-testid="button-notifications">
+            <Bell className="h-5 w-5" />
+          </Button>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-hidden pb-16">
+        {renderPage()}
+      </main>
+
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        unreadMessages={3}
+      />
+
+      <DriverNotifications
+        currentUserId={currentUserId}
+        currentUserLat={lastLocation?.lat}
+        currentUserLng={lastLocation?.lng}
+      />
+    </div>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="h-screen flex flex-col bg-background">
-          <header className="flex items-center justify-between p-4 border-b bg-card">
-            <h1 className="text-xl font-bold text-primary" data-testid="text-app-title">
-              DriverLift
-            </h1>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" data-testid="button-notifications">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <ThemeToggle />
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-hidden pb-16">
-            {renderPage()}
-          </main>
-
-          <BottomNav
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            unreadMessages={3}
-          />
-        </div>
+        <AppContent />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
