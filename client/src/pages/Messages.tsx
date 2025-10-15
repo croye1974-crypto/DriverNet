@@ -1,75 +1,83 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import MessageThread from "@/components/MessageThread";
 import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Message } from "@shared/schema";
 
-// TODO: Remove mock data
-const mockThreads = [
-  {
-    id: "1",
-    contactName: "David Brown",
-    lastMessage: "Great, I'll meet you there at 3pm",
-    timestamp: "2m ago",
-    unreadCount: 2,
-  },
-  {
-    id: "2",
-    contactName: "Lisa Chen",
-    lastMessage: "Thanks for the lift yesterday!",
-    timestamp: "1h ago",
-    unreadCount: 0,
-  },
-  {
-    id: "3",
-    contactName: "Mark Taylor",
-    lastMessage: "Are you still available for tomorrow?",
-    timestamp: "3h ago",
-    unreadCount: 1,
-  },
-];
-
-const mockMessages = [
-  {
-    id: "1",
-    message: "Hi, can you give me a lift to Manchester?",
-    timestamp: "10:30 AM",
-    isSender: false,
-  },
-  {
-    id: "2",
-    message: "Sure! I'm heading there at 2pm. Where should I pick you up?",
-    timestamp: "10:32 AM",
-    isSender: true,
-  },
-  {
-    id: "3",
-    message: "Birmingham New Street Station would be perfect",
-    timestamp: "10:33 AM",
-    isSender: false,
-  },
-  {
-    id: "4",
-    message: "Great, I'll meet you there at 3pm",
-    timestamp: "10:35 AM",
-    isSender: false,
-  },
-];
+interface Conversation {
+  userId: string;
+  name: string;
+  lastMessage: string;
+  timestamp: string;
+  unreadCount: number;
+}
 
 export default function Messages() {
-  const [selectedThread, setSelectedThread] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  
+  // Mock current user ID - in real app would come from auth context
+  const currentUserId = "user-1";
+
+  // Fetch conversations
+  const { 
+    data: conversations = [], 
+    isLoading: conversationsLoading,
+    isError: conversationsError 
+  } = useQuery<Conversation[]>({
+    queryKey: ["/api/conversations", currentUserId],
+  });
+
+  // Fetch messages for selected conversation
+  const { 
+    data: messages = [], 
+    isLoading: messagesLoading,
+    isError: messagesError 
+  } = useQuery<Message[]>({
+    queryKey: ["/api/messages/between", currentUserId, selectedUserId],
+    enabled: !!selectedUserId,
+  });
+
+  // Send message mutation
+  const sendMessage = useMutation({
+    mutationFn: async (content: string) => {
+      if (!selectedUserId) return;
+      const res = await apiRequest("POST", "/api/messages", {
+        senderId: currentUserId,
+        receiverId: selectedUserId,
+        content,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/between", currentUserId, selectedUserId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", currentUserId] });
+      setNewMessage("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Send Message",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSend = () => {
     if (newMessage.trim()) {
-      console.log("Sending message:", newMessage);
-      setNewMessage("");
+      sendMessage.mutate(newMessage);
     }
   };
 
-  if (selectedThread) {
-    const thread = mockThreads.find((t) => t.id === selectedThread);
+  if (selectedUserId) {
+    const conversation = conversations.find((c) => c.userId === selectedUserId);
     
     return (
       <div className="h-full flex flex-col bg-background">
@@ -77,17 +85,46 @@ export default function Messages() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSelectedThread(null)}
+            onClick={() => setSelectedUserId(null)}
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h2 className="font-semibold">{thread?.contactName}</h2>
+          <h2 className="font-semibold">{conversation?.name || "Chat"}</h2>
         </div>
 
-        <div className="flex-1 overflow-auto p-4">
-          {mockMessages.map((msg) => (
-            <ChatMessage key={msg.id} {...msg} />
+        <div className="flex-1 overflow-auto p-4 space-y-2">
+          {messagesLoading && (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading messages...
+            </div>
+          )}
+          
+          {messagesError && (
+            <Card className="p-6 border-destructive">
+              <p className="text-destructive font-medium">Failed to load messages</p>
+            </Card>
+          )}
+          
+          {!messagesLoading && !messagesError && messages.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No messages yet. Start a conversation!
+            </div>
+          )}
+          
+          {!messagesLoading && !messagesError && messages.map((msg) => (
+            <ChatMessage
+              key={msg.id}
+              id={msg.id}
+              message={msg.content}
+              timestamp={msg.createdAt 
+                ? new Date(msg.createdAt).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })
+                : ""}
+              isSender={msg.senderId === currentUserId}
+            />
           ))}
         </div>
 
@@ -96,10 +133,16 @@ export default function Messages() {
             placeholder="Type a message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            onKeyPress={(e) => e.key === "Enter" && !sendMessage.isPending && handleSend()}
+            disabled={sendMessage.isPending}
             data-testid="input-message"
           />
-          <Button size="icon" onClick={handleSend} data-testid="button-send">
+          <Button 
+            size="icon" 
+            onClick={handleSend} 
+            disabled={sendMessage.isPending || !newMessage.trim()}
+            data-testid="button-send"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -114,11 +157,33 @@ export default function Messages() {
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-2">
-        {mockThreads.map((thread) => (
+        {conversationsLoading && (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading conversations...
+          </div>
+        )}
+        
+        {conversationsError && (
+          <Card className="p-6 border-destructive">
+            <p className="text-destructive font-medium">Failed to load conversations</p>
+          </Card>
+        )}
+        
+        {!conversationsLoading && !conversationsError && conversations.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No conversations yet
+          </div>
+        )}
+        
+        {!conversationsLoading && !conversationsError && conversations.map((conv) => (
           <MessageThread
-            key={thread.id}
-            {...thread}
-            onClick={setSelectedThread}
+            key={conv.userId}
+            id={conv.userId}
+            contactName={conv.name}
+            lastMessage={conv.lastMessage}
+            timestamp={conv.timestamp}
+            unreadCount={conv.unreadCount}
+            onClick={setSelectedUserId}
           />
         ))}
       </div>

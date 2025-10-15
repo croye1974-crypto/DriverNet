@@ -54,9 +54,14 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
     mutationFn: async (data: JobFormValues) => {
       const res = await apiRequest("POST", "/api/jobs", {
         scheduleId,
-        ...data,
-        estimatedStartTime: new Date(data.estimatedStartTime).toISOString(),
-        estimatedEndTime: new Date(data.estimatedEndTime).toISOString(),
+        fromLocation: data.fromLocation,
+        fromLat: data.fromLat,
+        fromLng: data.fromLng,
+        toLocation: data.toLocation,
+        toLat: data.toLat,
+        toLng: data.toLng,
+        estimatedStartTime: data.estimatedStartTime,
+        estimatedEndTime: data.estimatedEndTime,
         orderInSchedule: jobCount + 1,
         status: "pending",
       });

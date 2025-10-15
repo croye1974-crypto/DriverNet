@@ -100,6 +100,15 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   checkInLng: true,
   checkOutLat: true,
   checkOutLng: true,
+}).extend({
+  estimatedStartTime: z.union([
+    z.date(), 
+    z.string().min(1, "Start time is required").pipe(z.coerce.date())
+  ]),
+  estimatedEndTime: z.union([
+    z.date(), 
+    z.string().min(1, "End time is required").pipe(z.coerce.date())
+  ]),
 });
 
 export const insertLiftOfferSchema = createInsertSchema(liftOffers).omit({
