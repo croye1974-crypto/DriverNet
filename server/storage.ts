@@ -8,6 +8,21 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const toRad = (degrees: number) => (degrees * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -26,7 +41,8 @@ export interface IStorage {
   createJob(job: InsertJob): Promise<Job>;
   getJob(id: string): Promise<Job | undefined>;
   getJobsByScheduleId(scheduleId: string): Promise<Job[]>;
-  updateJobStatus(id: string, status: string, actualStartTime?: Date, actualEndTime?: Date): Promise<Job | undefined>;
+  getRecentCheckIns(hoursAgo: number): Promise<Job[]>;
+  updateJobStatus(id: string, status: string, actualStartTime?: Date, actualEndTime?: Date, checkInLat?: number, checkInLng?: number, checkOutLat?: number, checkOutLng?: number): Promise<Job | undefined>;
   updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
   
@@ -43,6 +59,7 @@ export interface IStorage {
   getLiftRequest(id: string): Promise<LiftRequest | undefined>;
   getAllLiftRequests(): Promise<LiftRequest[]>;
   getLiftRequestsByRequesterId(requesterId: string): Promise<LiftRequest[]>;
+  findMatchingDrivers(requestLat: number, requestLng: number, maxDistanceKm: number, hoursAgo: number): Promise<{ job: Job, distance: number, scheduleUserId: string }[]>;
   deleteLiftRequest(id: string): Promise<boolean>;
   
   // Messages
@@ -146,6 +163,10 @@ export class MemStorage implements IStorage {
       status: insertJob.status ?? "pending",
       actualStartTime: null,
       actualEndTime: null,
+      checkInLat: null,
+      checkInLng: null,
+      checkOutLat: null,
+      checkOutLng: null,
     };
     this.jobs.set(id, job);
     return job;
@@ -161,11 +182,33 @@ export class MemStorage implements IStorage {
       .sort((a, b) => a.orderInSchedule - b.orderInSchedule);
   }
 
+  async getRecentCheckIns(hoursAgo: number): Promise<Job[]> {
+    const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+    
+    return Array.from(this.jobs.values()).filter((job) => {
+      const hasRecentCheckIn = job.actualStartTime && 
+        new Date(job.actualStartTime) >= cutoffTime &&
+        job.checkInLat !== null && 
+        job.checkInLng !== null;
+      
+      const hasRecentCheckOut = job.actualEndTime && 
+        new Date(job.actualEndTime) >= cutoffTime &&
+        job.checkOutLat !== null && 
+        job.checkOutLng !== null;
+      
+      return hasRecentCheckIn || hasRecentCheckOut;
+    });
+  }
+
   async updateJobStatus(
     id: string, 
     status: string, 
     actualStartTime?: Date, 
-    actualEndTime?: Date
+    actualEndTime?: Date,
+    checkInLat?: number,
+    checkInLng?: number,
+    checkOutLat?: number,
+    checkOutLng?: number
   ): Promise<Job | undefined> {
     const job = this.jobs.get(id);
     if (!job) return undefined;
@@ -175,6 +218,10 @@ export class MemStorage implements IStorage {
       status,
       actualStartTime: actualStartTime ?? job.actualStartTime,
       actualEndTime: actualEndTime ?? job.actualEndTime,
+      checkInLat: checkInLat ?? job.checkInLat,
+      checkInLng: checkInLng ?? job.checkInLng,
+      checkOutLat: checkOutLat ?? job.checkOutLat,
+      checkOutLng: checkOutLng ?? job.checkOutLng,
     };
     this.jobs.set(id, updatedJob);
     return updatedJob;
@@ -262,6 +309,42 @@ export class MemStorage implements IStorage {
     return Array.from(this.liftRequests.values()).filter(
       (request) => request.requesterId === requesterId
     );
+  }
+
+  async findMatchingDrivers(
+    requestLat: number, 
+    requestLng: number, 
+    maxDistanceKm: number, 
+    hoursAgo: number
+  ): Promise<{ job: Job, distance: number, scheduleUserId: string }[]> {
+    const recentJobs = await this.getRecentCheckIns(hoursAgo);
+    const matches: { job: Job, distance: number, scheduleUserId: string }[] = [];
+
+    for (const job of recentJobs) {
+      let checkLat: number | null = null;
+      let checkLng: number | null = null;
+
+      if (job.checkOutLat !== null && job.checkOutLng !== null && job.actualEndTime) {
+        checkLat = job.checkOutLat;
+        checkLng = job.checkOutLng;
+      } else if (job.checkInLat !== null && job.checkInLng !== null && job.actualStartTime) {
+        checkLat = job.checkInLat;
+        checkLng = job.checkInLng;
+      }
+
+      if (checkLat !== null && checkLng !== null) {
+        const distance = calculateDistance(requestLat, requestLng, checkLat, checkLng);
+        
+        if (distance <= maxDistanceKm) {
+          const schedule = await this.getSchedule(job.scheduleId);
+          if (schedule) {
+            matches.push({ job, distance, scheduleUserId: schedule.userId });
+          }
+        }
+      }
+    }
+
+    return matches.sort((a, b) => a.distance - b.distance);
   }
 
   async deleteLiftRequest(id: string): Promise<boolean> {

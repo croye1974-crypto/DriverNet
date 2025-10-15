@@ -34,6 +34,10 @@ export const jobs = pgTable("jobs", {
   estimatedEndTime: timestamp("estimated_end_time").notNull(),
   actualStartTime: timestamp("actual_start_time"),
   actualEndTime: timestamp("actual_end_time"),
+  checkInLat: real("check_in_lat"),
+  checkInLng: real("check_in_lng"),
+  checkOutLat: real("check_out_lat"),
+  checkOutLng: real("check_out_lng"),
   status: text("status").notNull().default("pending"),
   orderInSchedule: integer("order_in_schedule").notNull(),
 });
@@ -92,6 +96,10 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   actualStartTime: true,
   actualEndTime: true,
+  checkInLat: true,
+  checkInLng: true,
+  checkOutLat: true,
+  checkOutLng: true,
 });
 
 export const insertLiftOfferSchema = createInsertSchema(liftOffers).omit({

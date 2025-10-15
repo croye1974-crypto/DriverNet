@@ -136,6 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/jobs/:id/check-in", async (req, res) => {
     try {
       const { id } = req.params;
+      const { lat, lng } = req.body;
       const job = await storage.getJob(id);
       
       if (!job) {
@@ -149,7 +150,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedJob = await storage.updateJobStatus(
         id,
         "in-progress",
-        new Date()
+        new Date(),
+        undefined,
+        lat,
+        lng
       );
 
       res.json(updatedJob);
@@ -162,6 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/jobs/:id/check-out", async (req, res) => {
     try {
       const { id } = req.params;
+      const { lat, lng } = req.body;
       const job = await storage.getJob(id);
       
       if (!job) {
@@ -176,7 +181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id,
         "completed",
         undefined,
-        new Date()
+        new Date(),
+        undefined,
+        undefined,
+        lat,
+        lng
       );
 
       res.json(updatedJob);
