@@ -19,12 +19,16 @@ export interface IStorage {
   getSchedule(id: string): Promise<Schedule | undefined>;
   getSchedulesByUserId(userId: string): Promise<Schedule[]>;
   getScheduleByUserAndDate(userId: string, date: string): Promise<Schedule | undefined>;
+  updateSchedule(id: string, updates: Partial<InsertSchedule>): Promise<Schedule | undefined>;
+  deleteSchedule(id: string): Promise<boolean>;
   
   // Jobs
   createJob(job: InsertJob): Promise<Job>;
   getJob(id: string): Promise<Job | undefined>;
   getJobsByScheduleId(scheduleId: string): Promise<Job[]>;
   updateJobStatus(id: string, status: string, actualStartTime?: Date, actualEndTime?: Date): Promise<Job | undefined>;
+  updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined>;
+  deleteJob(id: string): Promise<boolean>;
   
   // Lift Offers
   createLiftOffer(offer: InsertLiftOffer): Promise<LiftOffer>;
@@ -32,12 +36,14 @@ export interface IStorage {
   getAllLiftOffers(): Promise<LiftOffer[]>;
   getLiftOffersByDriverId(driverId: string): Promise<LiftOffer[]>;
   updateLiftOfferStatus(id: string, status: string): Promise<LiftOffer | undefined>;
+  deleteLiftOffer(id: string): Promise<boolean>;
   
   // Lift Requests
   createLiftRequest(request: InsertLiftRequest): Promise<LiftRequest>;
   getLiftRequest(id: string): Promise<LiftRequest | undefined>;
   getAllLiftRequests(): Promise<LiftRequest[]>;
   getLiftRequestsByRequesterId(requesterId: string): Promise<LiftRequest[]>;
+  deleteLiftRequest(id: string): Promise<boolean>;
   
   // Messages
   createMessage(message: InsertMessage): Promise<Message>;
@@ -115,6 +121,22 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async updateSchedule(id: string, updates: Partial<InsertSchedule>): Promise<Schedule | undefined> {
+    const schedule = this.schedules.get(id);
+    if (!schedule) return undefined;
+    
+    const updatedSchedule: Schedule = {
+      ...schedule,
+      ...updates,
+    };
+    this.schedules.set(id, updatedSchedule);
+    return updatedSchedule;
+  }
+
+  async deleteSchedule(id: string): Promise<boolean> {
+    return this.schedules.delete(id);
+  }
+
   // Jobs
   async createJob(insertJob: InsertJob): Promise<Job> {
     const id = randomUUID();
@@ -158,6 +180,22 @@ export class MemStorage implements IStorage {
     return updatedJob;
   }
 
+  async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
+    const job = this.jobs.get(id);
+    if (!job) return undefined;
+    
+    const updatedJob: Job = {
+      ...job,
+      ...updates,
+    };
+    this.jobs.set(id, updatedJob);
+    return updatedJob;
+  }
+
+  async deleteJob(id: string): Promise<boolean> {
+    return this.jobs.delete(id);
+  }
+
   // Lift Offers
   async createLiftOffer(insertOffer: InsertLiftOffer): Promise<LiftOffer> {
     const id = randomUUID();
@@ -195,6 +233,10 @@ export class MemStorage implements IStorage {
     return updatedOffer;
   }
 
+  async deleteLiftOffer(id: string): Promise<boolean> {
+    return this.liftOffers.delete(id);
+  }
+
   // Lift Requests
   async createLiftRequest(insertRequest: InsertLiftRequest): Promise<LiftRequest> {
     const id = randomUUID();
@@ -220,6 +262,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.liftRequests.values()).filter(
       (request) => request.requesterId === requesterId
     );
+  }
+
+  async deleteLiftRequest(id: string): Promise<boolean> {
+    return this.liftRequests.delete(id);
   }
 
   // Messages
