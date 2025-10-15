@@ -18,13 +18,13 @@ A ride-sharing application specifically designed for trade plate car delivery dr
 - ✅ Mobile-first responsive design
 - ✅ Dark/light theme support
 - ✅ Bottom navigation for mobile
+- ✅ Daily schedule management with job input
 - ✅ Job check-in/check-out with GPS location capture
 - ✅ Automatic driver matching within 10 miles using Haversine formula
 - ✅ "Find Nearby Drivers" feature on lift requests
 - ✅ Interactive map view toggle for lift requests
 
 ### In Development
-- 🔄 Daily schedule input with job locations
 - 🔄 Automatic journey time estimation
 - 🔄 Real-time driver position updates
 
@@ -94,6 +94,18 @@ A ride-sharing application specifically designed for trade plate car delivery dr
 - Map view preferred over list for finding nearby drivers
 
 ## Recent Changes (October 15, 2025)
+
+### Schedule Management System
+- ✅ Created dedicated Schedule page (replaced Post tab in navigation)
+  - Date selector for viewing schedules for any day
+  - Add delivery job dialog with GPS location capture
+  - Job list showing pickup/delivery locations with status tracking
+  - Job status flow: Pending → In Progress → Completed
+  - Check-in/out buttons integrated with GPS capture
+  - Comprehensive error handling and loading states
+  - All interactive elements have test IDs for automated testing
+
+### Automatic Driver Matching
 - ✅ Implemented automatic driver matching system
   - Jobs now capture GPS location on check-in/check-out
   - Matching algorithm finds drivers within 10 miles (16.09km) using Haversine formula
