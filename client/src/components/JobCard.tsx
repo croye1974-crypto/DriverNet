@@ -1,33 +1,63 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, Clock, CheckCircle, Circle } from "lucide-react";
+import { MapPin, Navigation, Clock, CheckCircle, Circle, Loader2 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Job } from "@shared/schema";
 
 interface JobCardProps {
   id: string;
-  fromLocation: string;
-  toLocation: string;
-  estimatedStartTime: string;
-  estimatedEndTime: string;
+  fromLocation?: string;
+  toLocation?: string;
+  estimatedStartTime?: string;
+  estimatedEndTime?: string;
   actualStartTime?: string;
   actualEndTime?: string;
-  status: "pending" | "in-progress" | "completed";
-  onCheckIn?: (id: string) => void;
-  onCheckOut?: (id: string) => void;
+  status?: "pending" | "in-progress" | "completed";
 }
 
 export default function JobCard({
   id,
-  fromLocation,
-  toLocation,
-  estimatedStartTime,
-  estimatedEndTime,
-  actualStartTime,
-  actualEndTime,
-  status,
-  onCheckIn,
-  onCheckOut,
+  fromLocation: propsFromLocation,
+  toLocation: propsToLocation,
+  estimatedStartTime: propsEstimatedStartTime,
+  estimatedEndTime: propsEstimatedEndTime,
+  actualStartTime: propsActualStartTime,
+  actualEndTime: propsActualEndTime,
+  status: propsStatus,
 }: JobCardProps) {
+  const { toast } = useToast();
+  
+  const { data: job, isLoading } = useQuery<Job>({
+    queryKey: ["/api/jobs", id],
+    queryFn: async () => {
+      const response = await fetch(`/api/jobs/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch job');
+      }
+      return response.json();
+    },
+    enabled: !!id,
+  });
+
+  const fromLocation = job?.fromLocation ?? propsFromLocation ?? "";
+  const toLocation = job?.toLocation ?? propsToLocation ?? "";
+  const estimatedStartTime = job?.estimatedStartTime 
+    ? new Date(job.estimatedStartTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : propsEstimatedStartTime ?? "";
+  const estimatedEndTime = job?.estimatedEndTime
+    ? new Date(job.estimatedEndTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : propsEstimatedEndTime ?? "";
+  const actualStartTime = job?.actualStartTime
+    ? new Date(job.actualStartTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : propsActualStartTime;
+  const actualEndTime = job?.actualEndTime
+    ? new Date(job.actualEndTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : propsActualEndTime;
+  const status = (job?.status ?? propsStatus ?? "pending") as "pending" | "in-progress" | "completed";
+  
   const statusConfig = {
     pending: { label: "Pending", icon: Circle, variant: "outline" as const },
     "in-progress": { label: "In Progress", icon: Clock, variant: "default" as const },
@@ -35,6 +65,58 @@ export default function JobCard({
   };
 
   const StatusIcon = statusConfig[status].icon;
+
+  const checkInMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/jobs/${id}/check-in`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Checked in",
+        description: "You have successfully checked in to this job",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to check in",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const checkOutMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/jobs/${id}/check-out`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Checked out",
+        description: "You have successfully completed this job",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to check out",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoading && !propsStatus) {
+    return (
+      <Card className="p-4">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4">
@@ -78,20 +160,22 @@ export default function JobCard({
         <div className="flex gap-2 pt-2">
           {status === "pending" && (
             <Button
-              onClick={() => onCheckIn?.(id)}
+              onClick={() => checkInMutation.mutate()}
+              disabled={checkInMutation.isPending}
               className="flex-1"
               data-testid={`button-check-in-${id}`}
             >
-              Check In
+              {checkInMutation.isPending ? "Checking in..." : "Check In"}
             </Button>
           )}
           {status === "in-progress" && (
             <Button
-              onClick={() => onCheckOut?.(id)}
+              onClick={() => checkOutMutation.mutate()}
+              disabled={checkOutMutation.isPending}
               className="flex-1"
               data-testid={`button-check-out-${id}`}
             >
-              Check Out
+              {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
             </Button>
           )}
         </div>

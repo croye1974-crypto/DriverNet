@@ -10,7 +10,6 @@ export default function JobCardExample() {
         estimatedStartTime="09:00"
         estimatedEndTime="11:00"
         status="pending"
-        onCheckIn={(id) => console.log(`Check in job ${id}`)}
       />
       <JobCard
         id="2"
@@ -20,7 +19,6 @@ export default function JobCardExample() {
         estimatedEndTime="13:00"
         actualStartTime="11:35"
         status="in-progress"
-        onCheckOut={(id) => console.log(`Check out job ${id}`)}
       />
       <JobCard
         id="3"
