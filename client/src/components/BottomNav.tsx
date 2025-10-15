@@ -29,22 +29,24 @@ export default function BottomNav({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 gap-1 relative hover-elevate active-elevate-2 rounded-md py-2 ${
+              className={`flex flex-col items-center justify-center flex-1 gap-1 hover-elevate active-elevate-2 rounded-md py-2 ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
               data-testid={`button-nav-${tab.id}`}
             >
-              <Icon className="h-5 w-5" />
+              <div className="relative">
+                <Icon className="h-5 w-5" />
+                {tab.id === "messages" && unreadMessages > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-2 h-4 min-w-[16px] px-1 py-0 text-[10px] leading-4 rounded-full flex items-center justify-center"
+                    data-testid="badge-unread-messages"
+                  >
+                    {unreadMessages}
+                  </Badge>
+                )}
+              </div>
               <span className="text-xs font-medium">{tab.label}</span>
-              {tab.id === "messages" && unreadMessages > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute top-1 left-1/2 -translate-x-1/2 h-4 min-w-4 px-1 text-xs"
-                  data-testid="badge-unread-messages"
-                >
-                  {unreadMessages}
-                </Badge>
-              )}
             </button>
           );
         })}
