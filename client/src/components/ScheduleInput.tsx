@@ -11,8 +11,9 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Navigation } from "lucide-react";
 import LocationInput from "./LocationInput";
+import { estimateJourneyTime, formatDuration, formatDistance, calculateDistance } from "@/lib/journey";
 
 const jobSchema = z.object({
   fromLocation: z.string().min(1, "Pickup location is required"),
@@ -136,6 +137,13 @@ export default function ScheduleInput({ onSubmit }: ScheduleInputProps) {
                             if (lat !== undefined && lng !== undefined) {
                               form.setValue(`jobs.${index}.fromLat`, lat);
                               form.setValue(`jobs.${index}.fromLng`, lng);
+                              
+                              const toLat = form.getValues(`jobs.${index}.toLat`);
+                              const toLng = form.getValues(`jobs.${index}.toLng`);
+                              if (toLat !== undefined && toLng !== undefined) {
+                                const estimatedTime = estimateJourneyTime(lat, lng, toLat, toLng);
+                                form.setValue(`jobs.${index}.estimatedDuration`, estimatedTime);
+                              }
                             }
                           }}
                           placeholder="Pickup location"
@@ -159,6 +167,13 @@ export default function ScheduleInput({ onSubmit }: ScheduleInputProps) {
                             if (lat !== undefined && lng !== undefined) {
                               form.setValue(`jobs.${index}.toLat`, lat);
                               form.setValue(`jobs.${index}.toLng`, lng);
+                              
+                              const fromLat = form.getValues(`jobs.${index}.fromLat`);
+                              const fromLng = form.getValues(`jobs.${index}.fromLng`);
+                              if (fromLat !== undefined && fromLng !== undefined) {
+                                const estimatedTime = estimateJourneyTime(fromLat, fromLng, lat, lng);
+                                form.setValue(`jobs.${index}.estimatedDuration`, estimatedTime);
+                              }
                             }
                           }}
                           placeholder="Destination"
@@ -167,6 +182,25 @@ export default function ScheduleInput({ onSubmit }: ScheduleInputProps) {
                     </FormItem>
                   )}
                 />
+
+                {form.watch(`jobs.${index}.fromLat`) !== undefined && 
+                 form.watch(`jobs.${index}.toLat`) !== undefined && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Navigation className="h-4 w-4" />
+                    <span>
+                      {formatDistance(
+                        calculateDistance(
+                          form.watch(`jobs.${index}.fromLat`)!,
+                          form.watch(`jobs.${index}.fromLng`)!,
+                          form.watch(`jobs.${index}.toLat`)!,
+                          form.watch(`jobs.${index}.toLng`)!
+                        )
+                      )}
+                      {" • "}
+                      Estimated: {formatDuration(form.watch(`jobs.${index}.estimatedDuration`))}
+                    </span>
+                  </div>
+                )}
 
                 <FormField
                   control={form.control}
