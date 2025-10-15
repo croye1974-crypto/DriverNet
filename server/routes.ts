@@ -8,6 +8,7 @@ import {
   insertLiftRequestSchema,
   insertMessageSchema 
 } from "@shared/schema";
+import { z } from "zod";
 
 const updateScheduleSchema = insertScheduleSchema.partial();
 const updateJobSchema = insertJobSchema.partial();
