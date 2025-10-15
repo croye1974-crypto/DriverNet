@@ -39,7 +39,8 @@ export default function BottomNav({
               {tab.id === "messages" && unreadMessages > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute top-1 right-1/4 h-4 min-w-4 px-1 text-xs"
+                  className="absolute top-1 left-1/2 -translate-x-1/2 h-4 min-w-4 px-1 text-xs"
+                  data-testid="badge-unread-messages"
                 >
                   {unreadMessages}
                 </Badge>
