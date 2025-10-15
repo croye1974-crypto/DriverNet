@@ -6,21 +6,21 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import FindLifts from "@/pages/FindLifts";
-import Post from "@/pages/Post";
+import Schedule from "@/pages/Schedule";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"find" | "post" | "messages" | "profile">("find");
+  const [activeTab, setActiveTab] = useState<"find" | "schedule" | "messages" | "profile">("schedule");
 
   const renderPage = () => {
     switch (activeTab) {
       case "find":
         return <FindLifts />;
-      case "post":
-        return <Post />;
+      case "schedule":
+        return <Schedule />;
       case "messages":
         return <Messages />;
       case "profile":
