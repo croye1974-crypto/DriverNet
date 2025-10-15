@@ -12,6 +12,16 @@ import { z } from "zod";
 
 const updateScheduleSchema = insertScheduleSchema.partial();
 const updateJobSchema = insertJobSchema.partial();
+const checkInOutSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+});
+const findMatchesSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  maxDistanceKm: z.number().positive().max(160).optional().default(16.09),
+  hoursAgo: z.number().positive().max(168).optional().default(24),
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/schedules", async (req, res) => {
@@ -136,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/jobs/:id/check-in", async (req, res) => {
     try {
       const { id } = req.params;
-      const { lat, lng } = req.body;
+      const { lat, lng } = checkInOutSchema.parse(req.body);
       const job = await storage.getJob(id);
       
       if (!job) {
@@ -158,6 +168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedJob);
     } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid location data", details: error });
+      }
       console.error("Check-in error:", error);
       res.status(500).json({ error: "Failed to check in" });
     }
@@ -166,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/jobs/:id/check-out", async (req, res) => {
     try {
       const { id } = req.params;
-      const { lat, lng } = req.body;
+      const { lat, lng } = checkInOutSchema.parse(req.body);
       const job = await storage.getJob(id);
       
       if (!job) {
@@ -190,6 +203,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedJob);
     } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid location data", details: error });
+      }
       console.error("Check-out error:", error);
       res.status(500).json({ error: "Failed to check out" });
     }
@@ -362,6 +378,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get lift request error:", error);
       res.status(500).json({ error: "Failed to get lift request" });
+    }
+  });
+
+  app.post("/api/lift-requests/find-matches", async (req, res) => {
+    try {
+      const { lat, lng, maxDistanceKm, hoursAgo } = findMatchesSchema.parse(req.body);
+      
+      const matches = await storage.findMatchingDrivers(lat, lng, maxDistanceKm, hoursAgo);
+      
+      const enrichedMatches = await Promise.all(
+        matches.map(async (match) => {
+          const driver = await storage.getUser(match.scheduleUserId);
+          return {
+            job: match.job,
+            distance: match.distance,
+            driver: driver ? {
+              id: driver.id,
+              name: driver.name,
+              avatar: driver.avatar,
+              rating: driver.rating,
+              verified: driver.verified,
+            } : null,
+          };
+        })
+      );
+      
+      res.json(enrichedMatches);
+    } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid match request data", details: error });
+      }
+      console.error("Find matches error:", error);
+      res.status(500).json({ error: "Failed to find matches" });
     }
   });
 
