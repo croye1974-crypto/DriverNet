@@ -29,6 +29,7 @@ A ride-sharing application specifically designed for trade plate car delivery dr
 
 ### In Development
 - 🔄 Automatic journey time estimation
+- 🔄 Full address autocomplete (currently basic postcode lookup)
 
 ### Planned (Future)
 - Driver ratings and reviews
@@ -105,6 +106,19 @@ A ride-sharing application specifically designed for trade plate car delivery dr
   - Check-in/out buttons integrated with GPS capture
   - Comprehensive error handling and loading states
   - All interactive elements have test IDs for automated testing
+
+### UK Postcode Lookup Integration
+- ✅ Integrated postcodes.io API for UK postcode lookup
+  - Free API, no authentication required
+  - Auto-fills location name and GPS coordinates from postcode
+  - Optional postcode entry - can use GPS instead
+  - Clear validation errors if neither postcode nor GPS used
+  - Supports all UK postcodes with real geographic data
+- ✅ Smart time defaults for today's schedule
+  - Start time defaults to next 15-minute interval
+  - End time defaults to 2 hours after start
+  - Can override for carry-over jobs (next day delivery)
+  - Refreshes to current time when dialog opens
 
 ### Automatic Driver Matching
 - ✅ Implemented automatic driver matching system
