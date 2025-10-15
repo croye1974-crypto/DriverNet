@@ -136,11 +136,11 @@ export default function Schedule() {
   const sortedJobs = [...jobs].sort((a, b) => a.orderInSchedule - b.orderInSchedule);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto bg-background">
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold" data-testid="text-schedule-title">My Schedule</h2>
+            <h2 className="text-xl font-semibold" data-testid="text-schedule-title">My Schedule</h2>
             <p className="text-sm text-muted-foreground" data-testid="text-schedule-date">
               {format(new Date(selectedDate), "EEEE, MMMM d, yyyy")}
             </p>
@@ -149,7 +149,7 @@ export default function Schedule() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background"
+            className="px-3 py-2 rounded-md bg-card text-sm shadow-sm"
             data-testid="input-date"
           />
         </div>
@@ -165,7 +165,7 @@ export default function Schedule() {
         </Button>
 
         {schedulesError && (
-          <Card className="p-6 border-destructive">
+          <Card className="p-6">
             <p className="text-destructive font-medium" data-testid="text-schedules-error">Failed to load schedules</p>
             <p className="text-sm text-muted-foreground mt-1" data-testid="text-schedules-error-detail">
               {schedulesErrorMsg instanceof Error ? schedulesErrorMsg.message : "Something went wrong"}
@@ -174,7 +174,7 @@ export default function Schedule() {
         )}
 
         {jobsError && (
-          <Card className="p-6 border-destructive">
+          <Card className="p-6">
             <p className="text-destructive font-medium" data-testid="text-jobs-error">Failed to load jobs</p>
             <p className="text-sm text-muted-foreground mt-1" data-testid="text-jobs-error-detail">
               {jobsErrorMsg instanceof Error ? jobsErrorMsg.message : "Something went wrong"}
@@ -197,7 +197,7 @@ export default function Schedule() {
           </Card>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {sortedJobs.map((job, index) => (
             <Card key={job.id} className="p-4" data-testid={`job-card-${job.id}`}>
               <div className="space-y-3">

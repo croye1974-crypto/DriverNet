@@ -81,7 +81,7 @@ export default function Messages() {
     
     return (
       <div className="h-full flex flex-col bg-background">
-        <div className="p-4 border-b flex items-center gap-3">
+        <div className="p-4 bg-card flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -90,10 +90,10 @@ export default function Messages() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h2 className="font-semibold">{conversation?.name || "Chat"}</h2>
+          <h2 className="font-semibold text-lg">{conversation?.name || "Chat"}</h2>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 space-y-2">
+        <div className="flex-1 overflow-auto p-4 space-y-3">
           {messagesLoading && (
             <div className="text-center py-8 text-muted-foreground">
               Loading messages...
@@ -101,7 +101,7 @@ export default function Messages() {
           )}
           
           {messagesError && (
-            <Card className="p-6 border-destructive">
+            <Card className="p-6">
               <p className="text-destructive font-medium">Failed to load messages</p>
             </Card>
           )}
@@ -128,7 +128,7 @@ export default function Messages() {
           ))}
         </div>
 
-        <div className="p-4 border-t flex gap-2">
+        <div className="p-4 bg-card flex gap-2">
           <Input
             placeholder="Type a message..."
             value={newMessage}
@@ -152,8 +152,8 @@ export default function Messages() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="p-4 border-b">
-        <h2 className="font-semibold text-lg">Messages</h2>
+      <div className="p-4 bg-card">
+        <h2 className="font-semibold text-xl">Messages</h2>
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-2">
@@ -164,7 +164,7 @@ export default function Messages() {
         )}
         
         {conversationsError && (
-          <Card className="p-6 border-destructive">
+          <Card className="p-6">
             <p className="text-destructive font-medium">Failed to load conversations</p>
           </Card>
         )}

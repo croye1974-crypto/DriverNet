@@ -20,7 +20,7 @@ export default function BottomNav({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-card-border z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card z-50 shadow-lg">
       <div className="flex items-center justify-around h-16 px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -29,13 +29,13 @@ export default function BottomNav({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 gap-1 hover-elevate active-elevate-2 rounded-md py-2 ${
+              className={`flex flex-col items-center justify-center flex-1 gap-0.5 hover-elevate active-elevate-2 rounded-md py-2 transition-colors ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
               data-testid={`button-nav-${tab.id}`}
             >
               <div className="relative">
-                <Icon className="h-5 w-5" />
+                <Icon className="h-6 w-6" />
                 {tab.id === "messages" && unreadMessages > 0 && (
                   <Badge
                     variant="destructive"
@@ -46,7 +46,7 @@ export default function BottomNav({
                   </Badge>
                 )}
               </div>
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className={`text-[10px] font-medium ${isActive ? 'font-semibold' : ''}`}>{tab.label}</span>
             </button>
           );
         })}

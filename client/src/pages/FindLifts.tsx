@@ -133,7 +133,7 @@ export default function FindLifts() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="p-4 border-b space-y-3">
+      <div className="p-4 bg-card space-y-3">
         <SearchBar
           placeholder="Search locations or drivers..."
           value={search}
@@ -171,7 +171,7 @@ export default function FindLifts() {
         </div>
       ) : (
         <Tabs defaultValue="offers" className="flex-1 flex flex-col">
-          <TabsList className="w-full rounded-none border-b">
+          <TabsList className="w-full rounded-none bg-card">
             <TabsTrigger value="offers" className="flex-1" data-testid="tab-offers">
               Lift Offers
             </TabsTrigger>
@@ -180,7 +180,7 @@ export default function FindLifts() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="offers" className="flex-1 overflow-auto p-4 space-y-3 mt-0">
+          <TabsContent value="offers" className="flex-1 overflow-auto p-4 space-y-2 mt-0">
             {mockDrivers.map((driver) => (
               <DriverCard
                 key={driver.id}
@@ -191,7 +191,7 @@ export default function FindLifts() {
             ))}
           </TabsContent>
 
-          <TabsContent value="requests" className="flex-1 overflow-auto p-4 space-y-3 mt-0">
+          <TabsContent value="requests" className="flex-1 overflow-auto p-4 space-y-2 mt-0">
             {mockRequests.map((request) => (
               <LiftRequestCard
                 key={request.id}

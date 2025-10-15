@@ -1,95 +1,123 @@
-# Design Guidelines: Trade Plate Driver Lift-Sharing Platform
+# Design Guidelines: DriverLift - Native Mobile App Experience
 
-## Design Approach
-**System**: Linear-inspired modern utility design with Uber/Lyft ride-sharing UX patterns
-**Justification**: Drivers need quick, efficient matching with clear visual hierarchy for time-sensitive decisions. The design prioritizes speed, clarity, and mobile-first usability.
+## Design Philosophy
+**System**: iOS/Android native app aesthetics with ride-sharing UX patterns (Uber, Lyft, WhatsApp)
+**Justification**: Drivers need an instant, familiar mobile experience with zero learning curve. The design mimics native platform conventions for maximum usability and trust.
 
-## Core Design Elements
+## Core Design Principles
+
+### Visual Language
+- **Minimal Borders**: No heavy borders on cards - use subtle shadows and background contrast instead
+- **Clean Surfaces**: Cards float on background with subtle elevation, not outlined boxes
+- **Native Spacing**: Generous padding, breathing room between elements
+- **System Fonts**: -apple-system, SF Pro, Roboto for native feel
+- **Flat & Fast**: Minimal decorative elements, maximum content clarity
 
 ### Color Palette
 **Light Mode:**
-- Primary: 220 85% 45% (professional blue)
-- Background: 0 0% 98% (soft white)
-- Surface: 0 0% 100%
-- Text Primary: 220 15% 15%
-- Text Secondary: 220 10% 45%
-- Success: 142 70% 45% (available/confirmed)
-- Warning: 35 90% 55% (time-sensitive)
+- Background: 0 0% 95% (light gray, not white - native apps rarely use pure white backgrounds)
+- Surface/Card: 0 0% 100% (white cards on gray background)
+- Primary: 220 85% 50% (iOS blue-inspired)
+- Text Primary: 0 0% 13% (near black)
+- Text Secondary: 0 0% 45% (medium gray)
+- Text Tertiary: 0 0% 60% (light gray for metadata)
+- Divider: 0 0% 90% (subtle separators)
+- Success: 142 76% 36% (iOS green)
+- Destructive: 0 76% 50% (iOS red)
 
 **Dark Mode:**
-- Primary: 220 85% 65%
-- Background: 220 20% 8%
-- Surface: 220 15% 12%
-- Text Primary: 220 10% 95%
-- Text Secondary: 220 10% 65%
+- Background: 0 0% 0% (true black for OLED)
+- Surface/Card: 0 0% 10% (elevated surfaces)
+- Primary: 220 85% 60%
+- Text Primary: 0 0% 92%
+- Text Secondary: 0 0% 65%
+- Text Tertiary: 0 0% 50%
+- Divider: 0 0% 20%
 
 ### Typography
-- **Primary Font**: Inter (Google Fonts)
-- **Headings**: 600-700 weight, tight tracking
-- **Body**: 400-500 weight
-- **Scale**: text-sm for metadata, text-base for content, text-lg/xl for headings, text-2xl/3xl for page titles
+- **Font Stack**: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Roboto", sans-serif
+- **Weights**: Regular (400), Medium (500), Semibold (600), Bold (700)
+- **Hierarchy**:
+  - Navigation Titles: text-lg font-semibold
+  - Section Headers: text-base font-semibold
+  - Primary Text: text-base font-normal
+  - Secondary Text: text-sm text-muted-foreground
+  - Captions: text-xs text-tertiary
 
 ### Layout System
-**Spacing Primitives**: Tailwind units of 2, 4, 6, 8, 12, 16, 24
-- Consistent card padding: p-4 to p-6
-- Section spacing: space-y-6 to space-y-8
-- Component gaps: gap-4 to gap-6
+**Spacing** (Tailwind units):
+- Screen padding: px-4 (consistent app margins)
+- Card padding: p-4
+- Between cards: space-y-2 (tight, app-like list feel)
+- Between sections: space-y-6
+- Component internal gaps: gap-3
 
-### Component Library
+**Safe Areas**:
+- Top: Account for status bar and header
+- Bottom: Space for bottom navigation (16 height + safe area)
+- Horizontal: Consistent 16px margins
+
+### Component Patterns
 
 **Navigation**
-- Bottom tab bar (mobile): Fixed bottom-0, 4 primary tabs with icons (Find Lifts, Post Request, Messages, Profile)
-- Top header: Minimal with logo/title + notification bell icon
+- **Bottom Tab Bar**: Fixed, 4 tabs, icons + labels, active state with color change
+- **Top Header**: Clean title + optional action button, no heavy styling
+- **No visible borders**: Use background color changes instead
 
-**Cards (Driver/Lift Listings)**
-- Elevated white/surface cards with rounded-xl borders
-- Driver avatar (left), route info (center), time/distance (right)
-- Visual route indicator: Start point → End point with connecting line/arrow
-- Clear CTA buttons (Request Lift / View Details)
-- Status badges (Available Now, Departing Soon, Full)
+**Cards (List Items)**
+- No borders, just shadow-sm for subtle elevation
+- Background: white (light) / elevated surface (dark)
+- Rounded: rounded-xl for modern feel
+- Padding: p-4 consistent
+- Tap feedback: subtle scale on press
+- Look like native iOS/Android list cells
 
-**Map Integration**
-- Full-width embedded map showing driver locations and routes
-- Custom markers for pickup/dropoff points
-- Route polyline overlay
-- Toggle between list and map view
+**Driver/Lift Cards**
+- Avatar (left, 48px)
+- Content (center, flex-grow)
+- Metadata (right, time/distance)
+- Route visual: Simple icon-based start → end
+- CTA button: Full width or inline, native style
 
-**Forms (Post Lift Request)**
-- Location autocomplete inputs with map pin icons
-- Date/time picker with clear visual feedback
-- Additional notes textarea
-- Prominent "Post Request" button (w-full, py-3)
+**Forms & Inputs**
+- Native-style input fields with background fill
+- Clear touch targets (min 44px height)
+- Labels above inputs (iOS style) or floating
+- Minimal borders, use background color instead
 
-**Messaging**
-- Conversation list with driver avatars
-- Real-time message indicators (unread badges)
-- In-conversation: Clean chat bubbles, timestamp metadata
-- Quick reply suggestions for common coordination phrases
+**Bottom Sheet / Modals**
+- Slide up from bottom with backdrop
+- Rounded top corners
+- Drag handle for dismissal
+- Native animation timing
 
-**Profile Components**
-- Driver verification badge (checkmark icon)
-- Rating stars display
-- Trip history cards with route summary
-- Vehicle info display (if driver owns vehicle)
-
-### Images
-**Hero Section**: No traditional hero - app opens directly to functional dashboard showing nearby available drivers/requests map view. Immediate utility over aesthetics.
-
-**Supporting Images**: 
-- Driver profile photos (circular avatars, 48px to 64px)
-- Vehicle type icons where relevant
-- Empty state illustrations (friendly, minimal line art when no lifts available)
+**Lists**
+- No card borders in lists
+- Dividers between items (1px hairline)
+- Swipe actions where appropriate
+- Pull to refresh feel
 
 ### Interaction Patterns
-- Swipe-to-refresh on lists
-- Pull-up sheet for driver details (mobile)
-- Instant visual feedback on card taps (subtle scale/shadow)
-- Loading skeletons for async data
-- Toast notifications for confirmations
+- **Instant Feedback**: Visual response within 16ms
+- **Native Gestures**: Swipe, tap, long-press where expected
+- **Smooth Transitions**: 200-300ms ease curves
+- **Loading States**: Skeleton screens, not spinners
+- **Empty States**: Friendly, helpful messaging with action prompts
 
-### Key UX Principles
-1. **Speed First**: Minimize taps to post/find lifts (2-3 max)
-2. **Location Clarity**: Always show start → end visually
-3. **Real-time Updates**: Live status changes, no manual refresh needed
-4. **Trust Indicators**: Ratings, verification badges, trip history prominent
-5. **Mobile Optimized**: Touch targets 44px minimum, thumb-friendly bottom navigation
+### Shadows & Elevation
+- **Level 0**: No shadow (flush with background)
+- **Level 1**: shadow-sm (default cards)
+- **Level 2**: shadow-md (modals, popovers)
+- **Level 3**: shadow-lg (important dialogs)
+
+### Status Indicators
+- **Badges**: Small, pill-shaped, right-aligned
+- **Dots**: 8px circle for notification counts
+- **Icons**: Lucide icons, 20px standard size
+
+### Key UX Rules
+1. **Thumb Zone**: Critical actions in bottom 50% of screen
+2. **One Action**: Primary button always clear and prominent
+3. **Context Aware**: Show relevant info based on user state
+4. **Instant Updates**: Real-time without manual refresh
+5. **Forgiving**: Easy undo, clear confirmation for destructive actions
