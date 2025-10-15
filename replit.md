@@ -155,3 +155,15 @@ A ride-sharing application specifically designed for trade plate car delivery dr
   - Refreshes every minute for up-to-date positioning
 - ✅ WebSocket auto-reconnect with 3-second delay on disconnect
 - ✅ Graceful degradation: shows all notifications if user location unavailable
+
+### Lift Request Confirmation Flow
+- ✅ Implemented confirmation dialog for lift requests
+  - Click "Request Lift" opens AlertDialog with driver and route details
+  - Shows driver name, from/to locations for verification
+  - Cancel option to abort request without side effects
+  - Confirm button sends request and triggers success feedback
+- ✅ Visual feedback system for request status
+  - Success toast displays with clear message after confirmation
+  - Button updates to "Request Sent" (disabled) after successful request
+  - State persists during session to prevent duplicate requests
+  - All interactions properly tested with automated playwright tests
