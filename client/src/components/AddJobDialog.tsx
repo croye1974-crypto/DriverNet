@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Search } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,36 +19,78 @@ interface AddJobDialogProps {
 }
 
 const jobFormSchema = z.object({
+  fromPostcode: z.string().optional(),
   fromLocation: z.string().min(1, "Pickup location is required"),
-  fromLat: z.number().min(-90).max(90),
-  fromLng: z.number().min(-180).max(180),
+  fromLat: z.number().refine(val => val !== 0, "Please set pickup location using postcode lookup or GPS"),
+  fromLng: z.number().refine(val => val !== 0, "Please set pickup location using postcode lookup or GPS"),
+  toPostcode: z.string().optional(),
   toLocation: z.string().min(1, "Delivery location is required"),
-  toLat: z.number().min(-90).max(90),
-  toLng: z.number().min(-180).max(180),
+  toLat: z.number().refine(val => val !== 0, "Please set delivery location using postcode lookup or GPS"),
+  toLng: z.number().refine(val => val !== 0, "Please set delivery location using postcode lookup or GPS"),
   estimatedStartTime: z.string().min(1, "Start time is required"),
   estimatedEndTime: z.string().min(1, "End time is required"),
 });
 
 type JobFormValues = z.infer<typeof jobFormSchema>;
 
+// Helper to get default times (today, rounded to next 15-min interval)
+const getDefaultTimes = () => {
+  const now = new Date();
+  const startTime = new Date(now);
+  startTime.setMinutes(Math.ceil(startTime.getMinutes() / 15) * 15);
+  startTime.setSeconds(0);
+  
+  const endTime = new Date(startTime);
+  endTime.setHours(endTime.getHours() + 2);
+  
+  const formatDateTime = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+  
+  return {
+    start: formatDateTime(startTime),
+    end: formatDateTime(endTime),
+  };
+};
+
 export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount }: AddJobDialogProps) {
   const { toast } = useToast();
   const [gettingFromLocation, setGettingFromLocation] = useState(false);
   const [gettingToLocation, setGettingToLocation] = useState(false);
+  const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
+  const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
+
+  const defaultTimes = getDefaultTimes();
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
+      fromPostcode: "",
       fromLocation: "",
       fromLat: 0,
       fromLng: 0,
+      toPostcode: "",
       toLocation: "",
       toLat: 0,
       toLng: 0,
-      estimatedStartTime: "",
-      estimatedEndTime: "",
+      estimatedStartTime: defaultTimes.start,
+      estimatedEndTime: defaultTimes.end,
     },
   });
+
+  // Reset times when dialog opens
+  useEffect(() => {
+    if (open) {
+      const times = getDefaultTimes();
+      form.setValue("estimatedStartTime", times.start);
+      form.setValue("estimatedEndTime", times.end);
+    }
+  }, [open, form]);
 
   const createJob = useMutation({
     mutationFn: async (data: JobFormValues) => {
@@ -84,6 +126,63 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
       });
     },
   });
+
+  const lookupPostcode = async (field: "from" | "to") => {
+    const setter = field === "from" ? setLookingUpFromPostcode : setLookingUpToPostcode;
+    const postcode = field === "from" ? form.getValues("fromPostcode") : form.getValues("toPostcode");
+    
+    if (!postcode || postcode.trim().length < 5) {
+      toast({
+        title: "Invalid Postcode",
+        description: "Please enter a valid UK postcode",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setter(true);
+    
+    try {
+      const cleanPostcode = postcode.replace(/\s/g, "").toUpperCase();
+      const response = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
+      
+      if (!response.ok) {
+        throw new Error("Postcode not found");
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 200 && data.result) {
+        const result = data.result;
+        const fullAddress = `${result.admin_district}, ${result.region}`;
+        
+        if (field === "from") {
+          form.setValue("fromLat", result.latitude);
+          form.setValue("fromLng", result.longitude);
+          form.setValue("fromLocation", fullAddress);
+        } else {
+          form.setValue("toLat", result.latitude);
+          form.setValue("toLng", result.longitude);
+          form.setValue("toLocation", fullAddress);
+        }
+
+        toast({
+          title: "Postcode Found",
+          description: `Location set to ${fullAddress}`,
+        });
+      } else {
+        throw new Error("Invalid postcode data");
+      }
+    } catch (error) {
+      toast({
+        title: "Postcode Lookup Failed",
+        description: error instanceof Error ? error.message : "Could not find postcode. Please check and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setter(false);
+    }
+  };
 
   const getCurrentLocation = async (field: "from" | "to") => {
     const setter = field === "from" ? setGettingFromLocation : setGettingToLocation;
@@ -136,6 +235,45 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">Pickup Location</h3>
               
+              <div className="flex gap-2">
+                <FormField
+                  control={form.control}
+                  name="fromPostcode"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Postcode (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., M1 1AE"
+                          {...field}
+                          data-testid="input-from-postcode"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            form.setValue("fromLocation", "");
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => lookupPostcode("from")}
+                    disabled={lookingUpFromPostcode}
+                    data-testid="button-lookup-from-postcode"
+                  >
+                    {lookingUpFromPostcode ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="fromLocation"
@@ -174,11 +312,60 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                   </>
                 )}
               </Button>
+
+              <FormField
+                control={form.control}
+                name="fromLat"
+                render={() => (
+                  <FormItem>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">Delivery Location</h3>
               
+              <div className="flex gap-2">
+                <FormField
+                  control={form.control}
+                  name="toPostcode"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Postcode (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., L1 8JQ"
+                          {...field}
+                          data-testid="input-to-postcode"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            form.setValue("toLocation", "");
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => lookupPostcode("to")}
+                    disabled={lookingUpToPostcode}
+                    data-testid="button-lookup-to-postcode"
+                  >
+                    {lookingUpToPostcode ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="toLocation"
@@ -217,10 +404,20 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                   </>
                 )}
               </Button>
+
+              <FormField
+                control={form.control}
+                name="toLat"
+                render={() => (
+                  <FormItem>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold">Schedule</h3>
+              <h3 className="text-sm font-semibold">Timing (Defaults to Today)</h3>
               
               <FormField
                 control={form.control}
