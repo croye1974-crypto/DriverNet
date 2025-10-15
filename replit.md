@@ -24,18 +24,18 @@ A ride-sharing application specifically designed for trade plate car delivery dr
 - ✅ "Find Nearby Drivers" feature on lift requests
 - ✅ Interactive map view toggle for lift requests
 - ✅ Robust datetime validation for job creation
+- ✅ **Real-time proactive notifications** when drivers check in/out nearby
+- ✅ **WebSocket integration** for instant driver location updates
 
 ### In Development
 - 🔄 Automatic journey time estimation
-- 🔄 Real-time driver position updates
 
 ### Planned (Future)
-- Real-time notifications
 - Driver ratings and reviews
 - Trip history tracking
 - Route optimization
 - Public transport integration
-- Push notifications
+- Browser push notifications
 
 ## Project Architecture
 
@@ -52,7 +52,7 @@ A ride-sharing application specifically designed for trade plate car delivery dr
 - **Framework**: Express.js with TypeScript
 - **Storage**: In-memory storage (MemStorage) for MVP
 - **API**: RESTful endpoints with Zod validation
-- **WebSocket**: For real-time messaging (planned)
+- **WebSocket**: Real-time notifications on /ws path
 
 ### Shared (`shared/`)
 - **Schema**: Drizzle ORM schemas with Zod validation
@@ -126,3 +126,18 @@ A ride-sharing application specifically designed for trade plate car delivery dr
   - Error states with user-friendly messages
   - Send message mutation with toast notifications on error
   - Cache invalidation for real-time updates
+
+### Real-Time Proactive Notifications
+- ✅ Implemented WebSocket server on `/ws` path for instant updates
+- ✅ Automatic notifications when drivers check in/out within 10 miles
+  - Server broadcasts check-in/out events with GPS location
+  - Client calculates distance using user's last known location
+  - Only shows notifications for drivers within 16.09km (10 miles)
+  - Notifications auto-dismiss after 10 seconds
+  - Shows driver name, location, distance, and quick message button
+- ✅ Added `/api/users/:userId/last-location` endpoint
+  - Finds user's most recent check-in or check-out location
+  - Used for proximity-based notification filtering
+  - Refreshes every minute for up-to-date positioning
+- ✅ WebSocket auto-reconnect with 3-second delay on disconnect
+- ✅ Graceful degradation: shows all notifications if user location unavailable
