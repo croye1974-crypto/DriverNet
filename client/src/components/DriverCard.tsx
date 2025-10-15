@@ -16,6 +16,7 @@ interface DriverCardProps {
   verified?: boolean;
   status: "available" | "departing-soon" | "full";
   onRequestLift?: (id: string) => void;
+  isRequested?: boolean;
 }
 
 export default function DriverCard({
@@ -30,6 +31,7 @@ export default function DriverCard({
   verified = false,
   status,
   onRequestLift,
+  isRequested = false,
 }: DriverCardProps) {
   const statusConfig = {
     available: { label: "Available Now", variant: "default" as const },
@@ -102,10 +104,11 @@ export default function DriverCard({
       <Button
         className="w-full mt-4"
         onClick={() => onRequestLift?.(id)}
-        disabled={status === "full"}
+        disabled={status === "full" || isRequested}
+        variant={isRequested ? "secondary" : "default"}
         data-testid={`button-request-lift-${id}`}
       >
-        Request Lift
+        {isRequested ? "Request Sent" : "Request Lift"}
       </Button>
     </Card>
   );

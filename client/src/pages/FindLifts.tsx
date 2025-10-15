@@ -6,6 +6,17 @@ import LiftRequestCard from "@/components/LiftRequestCard";
 import MapView from "@/components/MapView";
 import { Button } from "@/components/ui/button";
 import { Map, List } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 // TODO: Remove mock data and fetch from API
 const mockDrivers = [
@@ -80,8 +91,11 @@ const mockRequests = [
 ];
 
 export default function FindLifts() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [requestingLift, setRequestingLift] = useState<{id: string; driverName: string; fromLocation: string; toLocation: string} | null>(null);
+  const [requestedLifts, setRequestedLifts] = useState<Set<string>>(new Set());
 
   const mapDrivers = mockDrivers.map((driver) => ({
     id: driver.id,
@@ -93,6 +107,29 @@ export default function FindLifts() {
     fromLocation: driver.fromLocation,
     toLocation: driver.toLocation,
   }));
+
+  const handleRequestLift = (id: string) => {
+    const driver = mockDrivers.find(d => d.id === id);
+    if (driver) {
+      setRequestingLift({
+        id: driver.id,
+        driverName: driver.driverName,
+        fromLocation: driver.fromLocation,
+        toLocation: driver.toLocation,
+      });
+    }
+  };
+
+  const confirmRequest = () => {
+    if (requestingLift) {
+      setRequestedLifts(prev => new Set(prev).add(requestingLift.id));
+      toast({
+        title: "Lift Request Sent",
+        description: `Your request to join ${requestingLift.driverName}'s lift has been sent. They will be notified and can accept or decline.`,
+      });
+      setRequestingLift(null);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -148,7 +185,8 @@ export default function FindLifts() {
               <DriverCard
                 key={driver.id}
                 {...driver}
-                onRequestLift={(id) => console.log(`Request lift from driver ${id}`)}
+                onRequestLift={handleRequestLift}
+                isRequested={requestedLifts.has(driver.id)}
               />
             ))}
           </TabsContent>
@@ -165,6 +203,32 @@ export default function FindLifts() {
           </TabsContent>
         </Tabs>
       )}
+
+      <AlertDialog open={!!requestingLift} onOpenChange={(open) => !open && setRequestingLift(null)}>
+        <AlertDialogContent data-testid="dialog-confirm-request">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Lift Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              {requestingLift && (
+                <>
+                  You are requesting to join <strong>{requestingLift.driverName}</strong>'s lift from{' '}
+                  <strong>{requestingLift.fromLocation}</strong> to{' '}
+                  <strong>{requestingLift.toLocation}</strong>.
+                  <br /><br />
+                  The driver will receive your request and can choose to accept or decline it. 
+                  You'll be notified of their decision.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-request">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRequest} data-testid="button-confirm-request">
+              Confirm Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
