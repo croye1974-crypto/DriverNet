@@ -189,11 +189,32 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
     setter(true);
     
     try {
+      // Check if geolocation is available
+      if (!navigator.geolocation) {
+        throw new Error("Geolocation is not supported by your browser");
+      }
+
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
+        // Add a manual timeout as extra safety
+        const timeoutId = setTimeout(() => {
+          reject(new Error("GPS timeout - location request took too long"));
+        }, 15000);
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clearTimeout(timeoutId);
+            resolve(pos);
+          },
+          (err) => {
+            clearTimeout(timeoutId);
+            reject(err);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          }
+        );
       });
 
       if (field === "from") {
@@ -211,7 +232,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
     } catch (error) {
       toast({
         title: "Location Error",
-        description: "Could not get GPS location. Please enable location services.",
+        description: error instanceof Error ? error.message : "Could not get GPS location. Please enable location services or use postcode lookup.",
         variant: "destructive",
       });
     } finally {

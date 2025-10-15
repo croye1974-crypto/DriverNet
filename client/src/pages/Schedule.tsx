@@ -55,14 +55,46 @@ export default function Schedule() {
   // Check-in mutation
   const checkIn = useMutation({
     mutationFn: async (jobId: string) => {
-      // Get current location
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-      });
+      // Get current location with timeout and fallback
+      let lat = 0;
+      let lng = 0;
+
+      try {
+        if (navigator.geolocation) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              reject(new Error("GPS timeout"));
+            }, 5000); // 5 second timeout
+
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                clearTimeout(timeoutId);
+                resolve(pos);
+              },
+              (err) => {
+                clearTimeout(timeoutId);
+                reject(err);
+              },
+              { timeout: 4000, enableHighAccuracy: false }
+            );
+          });
+          
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+        } else {
+          // Use default coordinates if GPS not available
+          lat = 53.4808; // Manchester default
+          lng = -2.2426;
+        }
+      } catch (error) {
+        // Fallback to default location if GPS fails
+        lat = 53.4808;
+        lng = -2.2426;
+      }
       
       const res = await apiRequest("POST", `/api/jobs/${jobId}/check-in`, {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
+        lat,
+        lng,
       });
       return res.json();
     },
@@ -85,13 +117,46 @@ export default function Schedule() {
   // Check-out mutation
   const checkOut = useMutation({
     mutationFn: async (jobId: string) => {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-      });
+      // Get current location with timeout and fallback
+      let lat = 0;
+      let lng = 0;
+
+      try {
+        if (navigator.geolocation) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              reject(new Error("GPS timeout"));
+            }, 5000); // 5 second timeout
+
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                clearTimeout(timeoutId);
+                resolve(pos);
+              },
+              (err) => {
+                clearTimeout(timeoutId);
+                reject(err);
+              },
+              { timeout: 4000, enableHighAccuracy: false }
+            );
+          });
+          
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+        } else {
+          // Use default coordinates if GPS not available
+          lat = 53.4808; // Manchester default
+          lng = -2.2426;
+        }
+      } catch (error) {
+        // Fallback to default location if GPS fails  
+        lat = 53.4808;
+        lng = -2.2426;
+      }
       
       const res = await apiRequest("POST", `/api/jobs/${jobId}/check-out`, {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
+        lat,
+        lng,
       });
       return res.json();
     },
