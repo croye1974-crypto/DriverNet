@@ -126,3 +126,30 @@ The application is structured with a clear separation between frontend, backend,
   - **Storage Methods**: createRating(), calculateReputationScore(), checkAndAwardBadges(), awardBadge()
   - **Badge Catalog**: 10 pre-defined badges (First Lift, 10 Lifts, 50 Lifts, 100 Lifts, 5-Star Pro, Perfect Week, Helpful Driver, Quick Responder, On-Time Champion, Route Master)
   - **Stats Tracked**: Total lifts shared, punctuality score, completion ratio, current streak, longest streak, total points
+
+### Driver Call Sign System
+- ✅ **Complete call sign identification system implemented**
+  - **Call Sign Format**: LL#### (2 uppercase letters + 4 digits), e.g., AB1234, MJ4782, EW9156
+  - **Purpose**: Simplify driver identification for less tech-savvy users - easier to remember than full names
+  - **Auto-Generation**: Call signs automatically generated on user creation with uniqueness validation
+  - **Display Locations**: 
+    - FindLifts page: Driver cards show call signs instead of names
+    - Messages page: Conversations list displays call signs
+    - Profile page: User's call sign shown as Badge below name (data-testid="text-call-sign")
+    - MessageDialog: Header shows call sign when messaging drivers
+    - Map markers: Call signs used in tooltips/popups
+  - **Implementation**: Added callSign field to user schema, updated storage layer with generation logic, UI components updated across all pages
+  - **Testing**: Verified on mobile (375x667) - all displays working correctly
+
+### Dynamic Spell Checking System
+- ✅ **Location name spell checking implemented**
+  - **Enabled**: ONLY on free-text location/place name inputs (spellCheck="true")
+    - AddJobDialog: fromLocation, toLocation inputs
+    - LocationInput component (used in schedule)
+    - RequestLiftForm: from/to location inputs
+    - PostLiftForm: from/to location inputs
+  - **Disabled**: Postcode inputs (spellCheck={false})
+    - AddJobDialog: fromPostcode, toPostcode inputs
+    - Postcodes are structured codes, not words requiring spell checking
+  - **Purpose**: Help drivers enter accurate place names to improve location matching and reduce typos
+  - **Testing**: Verified on mobile (375x667) - location names have spell checking, postcodes do not
