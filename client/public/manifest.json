@@ -1,6 +1,6 @@
 {
-  "name": "DriverLift - Trade Plate Driver Ride Sharing",
-  "short_name": "DriverLift",
+  "name": "DriveNet - Trade Plate Driver Ride Sharing",
+  "short_name": "DriveNet",
   "description": "Connect with fellow trade plate car delivery drivers for lifts to your next job or public transport",
   "start_url": "/",
   "display": "standalone",

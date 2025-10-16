@@ -1,5 +1,5 @@
-const CACHE_NAME = 'driverlift-v1';
-const RUNTIME_CACHE = 'driverlift-runtime-v1';
+const CACHE_NAME = 'drivenet-v1';
+const RUNTIME_CACHE = 'drivenet-runtime-v1';
 
 // Assets to cache on install
 const STATIC_ASSETS = [

@@ -1,7 +1,7 @@
-# DriverLift - Trade Plate Driver Ride Sharing Platform
+# DriveNet - Trade Plate Driver Ride Sharing Platform
 
 ## Overview
-DriverLift is a ride-sharing application designed for trade plate car delivery drivers. Its primary purpose is to connect drivers for shared lifts to their next jobs or public transport. The platform aims to streamline the logistics for delivery drivers by providing features such as GPS tracking, scheduling, real-time location updates, and efficient driver matching. The business vision is to optimize driver workflow, reduce travel inefficiencies, and foster a connected community among professional drivers. Key capabilities include driver profile management, lift request/offer browsing, automatic driver matching, job check-in/check-out with GPS, real-time messaging and notifications, and map visualization.
+DriveNet is a ride-sharing application designed for trade plate car delivery drivers. Its primary purpose is to connect drivers for shared lifts to their next jobs or public transport. The platform aims to streamline the logistics for delivery drivers by providing features such as GPS tracking, scheduling, real-time location updates, and efficient driver matching. The business vision is to optimize driver workflow, reduce travel inefficiencies, and foster a connected community among professional drivers. Key capabilities include driver profile management, lift request/offer browsing, automatic driver matching, job check-in/check-out with GPS, real-time messaging and notifications, and map visualization.
 
 ## User Preferences
 - Mobile-first design prioritized

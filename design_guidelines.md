@@ -1,4 +1,4 @@
-# Design Guidelines: DriverLift - Native Mobile App Experience
+# Design Guidelines: DriveNet - Native Mobile App Experience
 
 ## Design Philosophy
 **System**: iOS/Android native app aesthetics with ride-sharing UX patterns (Uber, Lyft, WhatsApp)

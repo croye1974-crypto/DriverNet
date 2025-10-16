@@ -33,7 +33,7 @@ export function registerStripeRoutes(app: Express) {
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: `${user.username}@driverlift.app`,
+          email: `${user.username}@drivenet.app`,
           metadata: {
             userId: user.id,
             username: user.username,
@@ -59,7 +59,7 @@ export function registerStripeRoutes(app: Express) {
               currency: 'gbp',
               product_data: {
                 name: planDetails.name,
-                description: `DriverLift ${planDetails.name} - Monthly Subscription`,
+                description: `DriveNet ${planDetails.name} - Monthly Subscription`,
               },
               unit_amount: planDetails.price,
               recurring: {
