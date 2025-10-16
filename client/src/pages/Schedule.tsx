@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Clock, CheckCircle, PlayCircle, StopCircle, Edit } from "lucide-react";
+import { Plus, MapPin, Clock, CheckCircle, PlayCircle, StopCircle, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -179,6 +179,31 @@ export default function Schedule() {
     },
   });
 
+  // Delete job mutation
+  const deleteJob = useMutation({
+    mutationFn: async (jobId: string) => {
+      const res = await apiRequest("DELETE", `/api/jobs/${jobId}`);
+      if (res.status === 204) {
+        return true;
+      }
+      throw new Error("Failed to delete job");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs/schedule", currentSchedule?.id] });
+      toast({
+        title: "Job Deleted",
+        description: "Delivery job removed from schedule",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Could not delete job",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddJob = async () => {
     if (!currentSchedule) {
       try {
@@ -326,6 +351,16 @@ export default function Schedule() {
                       >
                         <Edit className="h-3 w-3 mr-1" />
                         Edit
+                      </Button>
+                      <Button
+                        onClick={() => deleteJob.mutate(job.id)}
+                        disabled={deleteJob.isPending}
+                        variant="outline"
+                        size="sm"
+                        data-testid={`button-delete-${job.id}`}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
                       </Button>
                       <Button
                         onClick={() => checkIn.mutate(job.id)}
