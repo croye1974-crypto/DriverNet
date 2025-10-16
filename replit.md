@@ -107,14 +107,16 @@ The application features clear separation between frontend, backend, and shared 
    - Testing: Full E2E test passing - edit location, save, verify updates
    - Impact: Drivers can now modify job details before checking in
 
-6. **Automatic Journey Time Calculation** (Re-implemented)
-   - Feature: Auto-calculates journey time and end time based on distance between locations
+6. **Manual Journey Time Calculation** (Implemented)
+   - Feature: "Calculate Journey" button provides manual control over journey time calculation
    - Implementation: Uses Haversine formula to calculate distance, assumes 80 km/h average speed
    - Components: Added to both AddJobDialog and EditJobDialog
-   - Display: Shows distance (e.g., "159.4km") and estimated time (e.g., "2h") in a badge
-   - Auto-update: End time automatically updates when locations or start time changes
-   - Testing: E2E test verified London→Birmingham (159km, 2h) with correct auto-calculated end time
-   - Impact: Drivers no longer need to manually calculate journey times
+   - Display: Shows distance (e.g., "159.4km") and estimated time (e.g., "2h") in toast notification
+   - Manual Control: Users click button to calculate and update end time based on start time + journey duration
+   - Validation: Requires valid GPS coordinates (from postcode lookup or "Use Current Location") and start time
+   - Error Feedback: Shows "Missing Locations" or "Missing Start Time" toasts if prerequisites not met
+   - Testing: E2E test verified London→Birmingham (159km, 2h 2min) with GPS coordinates and manual calculation
+   - Impact: Gives drivers explicit control over when to calculate journey times, preventing unintended recalculations
 
 7. **Date/Time Validation & Journey Recalculation** (Fixed)
    - Issue: Users could enter invalid times (end before start), journey time didn't update when editing
@@ -144,6 +146,15 @@ The application features clear separation between frontend, backend, and shared 
    - UI Constraint: Browser's native date picker prevents selecting different dates
    - Testing: E2E test verified inputs restricted to schedule date and job created successfully
    - Impact: Jobs are always created on the correct schedule date, eliminating user confusion
+
+10. **Job Deletion** (Implemented)
+   - Feature: Delete button for pending jobs in Schedule page
+   - Implementation: DELETE `/api/jobs/:id` mutation with cache invalidation
+   - UI: Delete button appears alongside Edit for pending jobs (before check-in)
+   - Restriction: Only pending jobs can be deleted (not in-progress or completed)
+   - Feedback: "Job Deleted" toast notification on success
+   - Testing: E2E test verified job creation → deletion → removal from schedule
+   - Impact: Drivers can remove incorrectly added or unnecessary jobs from their schedule
 
 ### Testing Infrastructure
 - **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure

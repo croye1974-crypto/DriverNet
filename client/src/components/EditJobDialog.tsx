@@ -102,18 +102,7 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
     },
   });
 
-  // Helper function to calculate and set journey time
-  const calculateAndSetJourneyTime = (fromLat: number, fromLng: number, toLat: number, toLng: number, startTime: string) => {
-    if (fromLat && fromLng && toLat && toLng && fromLat !== 0 && fromLng !== 0 && toLat !== 0 && toLng !== 0 && startTime) {
-      const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
-      const startDate = new Date(startTime);
-      const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
-      const formattedEnd = endDate.toISOString().slice(0, 16);
-      form.setValue("estimatedEndTime", formattedEnd);
-    }
-  };
-
-  // Reset form when job changes AND recalculate journey time
+  // Reset form when job changes
   useEffect(() => {
     if (open && job) {
       const startTime = formatDateForInput(job.estimatedStartTime);
@@ -130,26 +119,42 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
         estimatedStartTime: startTime,
         estimatedEndTime: formatDateForInput(job.estimatedEndTime),
       });
-
-      // Recalculate journey time immediately after loading job data
-      setTimeout(() => {
-        calculateAndSetJourneyTime(job.fromLat, job.fromLng, job.toLat, job.toLng, startTime);
-      }, 0);
     }
   }, [open, job, form]);
 
-  // Auto-calculate journey time and end time when locations change
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === "fromLat" || name === "fromLng" || name === "toLat" || name === "toLng" || name === "estimatedStartTime") {
-        const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = value;
-        if (fromLat && fromLng && toLat && toLng && estimatedStartTime) {
-          calculateAndSetJourneyTime(fromLat, fromLng, toLat, toLng, estimatedStartTime);
-        }
-      }
+  // Manual journey calculation
+  const handleCalculateJourney = () => {
+    const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = form.getValues();
+    
+    if (!fromLat || !fromLng || !toLat || !toLng || fromLat === 0 || fromLng === 0 || toLat === 0 || toLng === 0) {
+      toast({
+        title: "Missing Locations",
+        description: "Please set both pickup and delivery locations first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!estimatedStartTime) {
+      toast({
+        title: "Missing Start Time",
+        description: "Please set the start time first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
+    const startDate = new Date(estimatedStartTime);
+    const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
+    const formattedEnd = endDate.toISOString().slice(0, 16);
+    form.setValue("estimatedEndTime", formattedEnd);
+    
+    toast({
+      title: "Journey Calculated",
+      description: `${formatDistance(calculateDistance(fromLat, fromLng, toLat, toLng))} • ${formatDuration(journeyMinutes)} journey`,
     });
-    return () => subscription.unsubscribe();
-  }, [form]);
+  };
 
   const updateJob = useMutation({
     mutationFn: async (data: EditJobFormValues) => {
@@ -474,6 +479,17 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
                   </FormItem>
                 )}
               />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCalculateJourney}
+                className="w-full"
+                data-testid="button-calculate-journey-edit"
+              >
+                <Navigation className="h-4 w-4 mr-2" />
+                Calculate Journey
+              </Button>
             </div>
 
             <div className="flex gap-3">
