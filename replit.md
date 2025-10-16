@@ -253,6 +253,14 @@ A ride-sharing application specifically designed for trade plate car delivery dr
   - Layer cleanup preserves tile layers while removing only markers/polylines
   - Verified tile persistence through all interactions
 
+### MessageDialog Z-Index Fix (October 16, 2025)
+- ✅ **Dialog overlay visibility issue resolved**
+  - Updated base Dialog component z-index from 50 to 9998/9999
+  - Dialog now appears clearly above Leaflet map elements
+  - Text input fully visible when typing (no longer hidden)
+  - Dark overlay properly dims map background
+  - Fix applies to all dialogs app-wide
+
 ### Messages Page Enhancement
 - ✅ **Search functionality**
   - Real-time conversation search by contact name or message content
