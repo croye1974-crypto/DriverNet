@@ -65,7 +65,13 @@ export interface IStorage {
   // Messages
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesBetweenUsers(userId1: string, userId2: string): Promise<Message[]>;
-  getConversations(userId: string): Promise<{ userId: string; lastMessage: Message }[]>;
+  getConversations(userId: string): Promise<{ 
+    userId: string; 
+    name: string;
+    lastMessage: string; 
+    timestamp: string;
+    unreadCount: number;
+  }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -83,6 +89,25 @@ export class MemStorage implements IStorage {
     this.liftOffers = new Map();
     this.liftRequests = new Map();
     this.messages = new Map();
+    
+    this.seedInitialData();
+  }
+
+  private seedInitialData(): void {
+    if (process.env.NODE_ENV !== 'development') {
+      return;
+    }
+
+    const demoUsers: User[] = [
+      { id: 'user-1', username: 'john_driver', name: 'John Smith', avatar: null, rating: 4.8, totalTrips: 156, verified: true },
+      { id: 'user-2', username: 'sarah_delivers', name: 'Sarah Johnson', avatar: null, rating: 4.9, totalTrips: 203, verified: true },
+      { id: 'user-3', username: 'mike_transport', name: 'Mike Williams', avatar: null, rating: 4.7, totalTrips: 98, verified: true },
+      { id: 'user-4', username: 'emma_driver', name: 'Emma Brown', avatar: null, rating: 4.6, totalTrips: 134, verified: true },
+    ];
+
+    demoUsers.forEach(user => {
+      this.users.set(user.id, user);
+    });
   }
 
   // Users
@@ -373,26 +398,57 @@ export class MemStorage implements IStorage {
       .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
   }
 
-  async getConversations(userId: string): Promise<{ userId: string; lastMessage: Message }[]> {
+  async getConversations(userId: string): Promise<{ 
+    userId: string; 
+    name: string;
+    lastMessage: string; 
+    timestamp: string;
+    unreadCount: number;
+  }[]> {
     const userMessages = Array.from(this.messages.values()).filter(
       (msg) => msg.senderId === userId || msg.receiverId === userId
     );
 
-    const conversationMap = new Map<string, Message>();
+    const conversationMap = new Map<string, { 
+      lastMessage: Message; 
+      unreadCount: number;
+    }>();
     
     userMessages.forEach((msg) => {
       const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
       const existing = conversationMap.get(otherUserId);
       
-      if (!existing || (msg.createdAt && existing.createdAt && msg.createdAt > existing.createdAt)) {
-        conversationMap.set(otherUserId, msg);
+      const unreadIncrement = (msg.receiverId === userId && !msg.read) ? 1 : 0;
+      
+      if (!existing) {
+        conversationMap.set(otherUserId, {
+          lastMessage: msg,
+          unreadCount: unreadIncrement,
+        });
+      } else {
+        const msgTime = msg.createdAt?.getTime() ?? 0;
+        const existingTime = existing.lastMessage.createdAt?.getTime() ?? 0;
+        
+        if (msgTime > existingTime || (msgTime === existingTime && msg.id > existing.lastMessage.id)) {
+          existing.lastMessage = msg;
+        }
+        existing.unreadCount += unreadIncrement;
       }
     });
 
-    return Array.from(conversationMap.entries()).map(([userId, lastMessage]) => ({
-      userId,
-      lastMessage,
-    }));
+    const conversations = Array.from(conversationMap.entries()).map(([otherUserId, data]) => {
+      const otherUser = this.users.get(otherUserId);
+      return {
+        userId: otherUserId,
+        name: otherUser?.name || "Unknown User",
+        lastMessage: data.lastMessage.content,
+        timestamp: data.lastMessage.createdAt ? data.lastMessage.createdAt.toISOString() : "",
+        unreadCount: data.unreadCount,
+        sortTime: data.lastMessage.createdAt?.getTime() ?? 0,
+      };
+    });
+
+    return conversations.sort((a, b) => b.sortTime - a.sortTime).map(({ sortTime, ...conv }) => conv);
   }
 }
 

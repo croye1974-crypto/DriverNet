@@ -5,7 +5,7 @@ import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Search } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Message } from "@shared/schema";
@@ -22,6 +22,7 @@ export default function Messages() {
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Mock current user ID - in real app would come from auth context
   const currentUserId = "user-1";
@@ -75,6 +76,15 @@ export default function Messages() {
       sendMessage.mutate(newMessage);
     }
   };
+
+  // Filter conversations based on search query
+  const filteredConversations = conversations.filter((conv) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      conv.name.toLowerCase().includes(searchLower) ||
+      conv.lastMessage.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (selectedUserId) {
     const conversation = conversations.find((c) => c.userId === selectedUserId);
@@ -152,8 +162,18 @@ export default function Messages() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="p-4 bg-card">
+      <div className="p-4 bg-card space-y-3">
         <h2 className="font-semibold text-xl">Messages</h2>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+            data-testid="input-search-messages"
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-2">
@@ -175,13 +195,26 @@ export default function Messages() {
           </div>
         )}
         
-        {!conversationsLoading && !conversationsError && conversations.map((conv) => (
+        {!conversationsLoading && !conversationsError && conversations.length > 0 && filteredConversations.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No conversations match your search
+          </div>
+        )}
+        
+        {!conversationsLoading && !conversationsError && filteredConversations.map((conv) => (
           <MessageThread
             key={conv.userId}
             id={conv.userId}
             contactName={conv.name}
             lastMessage={conv.lastMessage}
-            timestamp={conv.timestamp}
+            timestamp={conv.timestamp 
+              ? new Date(conv.timestamp).toLocaleString([], { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              : ""}
             unreadCount={conv.unreadCount}
             onClick={setSelectedUserId}
           />
