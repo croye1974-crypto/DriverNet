@@ -29,6 +29,7 @@ interface MapViewProps {
   zoom?: number;
   onOfferClick?: (offerId: string) => void;
   onRequestClick?: (requestId: string) => void;
+  userLocation?: { lat: number; lng: number };
 }
 
 // Calculate marker size based on zoom level (optimized for 2000+ markers on mobile)
@@ -65,6 +66,7 @@ export default function MapView({
   zoom = 7,
   onOfferClick,
   onRequestClick,
+  userLocation,
 }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,10 @@ export default function MapView({
         div.innerHTML = `
           <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-family: Inter, sans-serif; font-size: 13px;">
             <div style="font-weight: 600; margin-bottom: 8px;">Map Key</div>
+            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+              <div style="width: 16px; height: 16px; background-color: #8b5cf6; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+              <span style="font-weight: 500;">Your Location</span>
+            </div>
             <div style="display: flex; align-items: center; margin-bottom: 6px;">
               <div style="width: 16px; height: 16px; background-color: #3b82f6; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
               <span>Lift Offers</span>
@@ -214,7 +220,35 @@ export default function MapView({
       bounds.extend([request.fromLat, request.fromLng]);
     });
 
-  }, [liftOffers, liftRequests, onOfferClick, onRequestClick, currentZoom]);
+    // Add user location marker (purple) - always slightly larger and more prominent
+    if (userLocation) {
+      const userMarkerSize = Math.max(markerSize + 4, 24); // At least 24px, or 4px larger than others
+      const userIconSize = Math.floor(userMarkerSize * 0.6);
+      const userBorderWidth = borderWidth + 1;
+      
+      const userIcon = L.divIcon({
+        className: "custom-marker user-location",
+        html: `
+          <div data-testid="marker-user-location" aria-label="Your current location" style="background-color: #8b5cf6; width: ${userMarkerSize}px; height: ${userMarkerSize}px; border-radius: 50%; border: ${userBorderWidth}px solid white; box-shadow: 0 2px 6px rgba(139,92,246,0.5); display: flex; align-items: center; justify-content: center; position: relative;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="${userIconSize}" height="${userIconSize}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+            <div style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white;">●</div>
+          </div>
+        `,
+        iconSize: [userMarkerSize, userMarkerSize],
+        iconAnchor: [userMarkerSize / 2, userMarkerSize / 2],
+      });
+
+      const userMarker = L.marker([userLocation.lat, userLocation.lng], {
+        icon: userIcon,
+        keyboard: false,
+        zIndexOffset: 1000, // Always on top
+      }).addTo(map);
+
+      markersRef.current.push(userMarker);
+      bounds.extend([userLocation.lat, userLocation.lng]);
+    }
+
+  }, [liftOffers, liftRequests, onOfferClick, onRequestClick, currentZoom, userLocation]);
 
   // Separate effect for fitBounds - only runs when data changes, not zoom
   useEffect(() => {

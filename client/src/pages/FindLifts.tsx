@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DriverCard from "@/components/DriverCard";
 import SearchBar from "@/components/SearchBar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -76,6 +76,7 @@ export default function FindLifts() {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [requestingLift, setRequestingLift] = useState<{id: string; callSign: string; fromLocation: string; toLocation: string} | null>(null);
   const [requestedLifts, setRequestedLifts] = useState<Set<string>>(new Set());
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [messageDialog, setMessageDialog] = useState<{
     open: boolean;
     callSign: string;
@@ -101,6 +102,29 @@ export default function FindLifts() {
     queryKey: ["/api/jobs/recent-check-ins"],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
+
+  // Get user's current GPS location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log("GPS location not available:", error.message);
+          // Fallback to Birmingham, UK
+          setUserLocation({ lat: 52.4862, lng: -1.8904 });
+        },
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+    } else {
+      // Fallback if geolocation not supported
+      setUserLocation({ lat: 52.4862, lng: -1.8904 });
+    }
+  }, []);
 
   // Combine mock drivers with real checked-in drivers for map display
   const mapOffers = [
@@ -225,6 +249,7 @@ export default function FindLifts() {
             liftRequests={mapRequests}
             onOfferClick={handleOfferClick}
             onRequestClick={handleRequestClick}
+            userLocation={userLocation || undefined}
           />
         </div>
       ) : (

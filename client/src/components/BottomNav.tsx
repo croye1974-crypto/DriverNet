@@ -13,7 +13,7 @@ export default function BottomNav({
   unreadMessages = 0,
 }: BottomNavProps) {
   const tabs = [
-    { id: "find" as const, icon: MapPin, label: "Find Lifts" },
+    { id: "find" as const, icon: MapPin, label: "Map" },
     { id: "schedule" as const, icon: Calendar, label: "Schedule" },
     { id: "messages" as const, icon: MessageCircle, label: "Messages" },
     { id: "profile" as const, icon: User, label: "Profile" },
