@@ -267,6 +267,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                         <Input
                           placeholder="e.g., M1 1AE"
                           {...field}
+                          spellCheck={false}
                           data-testid="input-from-postcode"
                           onChange={(e) => {
                             field.onChange(e);
@@ -360,6 +361,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                         <Input
                           placeholder="e.g., L1 8JQ"
                           {...field}
+                          spellCheck={false}
                           data-testid="input-to-postcode"
                           onChange={(e) => {
                             field.onChange(e);

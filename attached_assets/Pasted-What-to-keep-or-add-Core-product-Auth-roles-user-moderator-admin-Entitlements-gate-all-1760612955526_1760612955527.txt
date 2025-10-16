@@ -1,0 +1,66 @@
+What to keep or add
+
+Core product
+	•	Auth + roles: user, moderator, admin.
+	•	Entitlements: gate all post, message, and live-location features behind subscription_status = active.
+	•	Matching: keep lift offers and requests, add ETA and detour-time scoring.
+	•	Privacy: only show precise live location after both parties accept a match. Before that, show coarse location.
+	•	Abuse controls: report user, block user, mute conversations, rate users after a ride.
+	•	Data expiry: auto expire offers and requests after a set window. Clean old location pings.
+
+Subscriptions
+	•	Stripe (or Paddle) for monthly plans. No marketplace payouts.
+	•	Webhooks: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted.
+	•	DB fields on users: stripe_customer_id, subscription_status (trialing, active, past_due, canceled), current_period_end, plan_id.
+	•	Middleware: check subscription_status == active before allowing create offer/request, open DMs, or enable live location.
+	•	Customer Portal: link for cancel, change plan, update card. Reduces support load.
+	•	Free tier (optional): view map and public posts only. No DMs or live locations. Helps growth.
+
+Legal and compliance (UK focus)
+	•	Terms of Use that state:
+	•	You are a platform for coordination, not a transport provider.
+	•	Users are responsible for their own travel, vehicles, and insurance.
+	•	No employment relationship. No right-to-work checks by the platform.
+	•	Prohibited conduct: harassment, unsafe driving, fake locations.
+	•	Privacy notice:
+	•	Lawful basis for location processing: legitimate interests and user consent.
+	•	Retention: live pings kept for short period, offers/requests for the job window, logs for fraud and safety.
+	•	GDPR rights and contact.
+	•	Safety page:
+	•	Meet in public areas, share trip with a contact, in-app block/report.
+	•	Identity suggestions: optional photo and phone verification.
+	•	Insurance note: advise users to check private or trade coverage if applicable.
+
+Trust and verification
+	•	Since no hiring or pay flows, keep it light:
+	•	Phone or email verification.
+	•	Optional photo ID check for higher trust badges.
+	•	Reputation: simple 1 to 5 star after a ride, plus short tags such as on time, helpful, safe driving.
+
+Notifications and presence
+	•	PWA with push notifications for matches and messages.
+	•	User-scoped WebSocket rooms. Do not broadcast location updates globally.
+
+Ops and metrics
+	•	Admin console: user search, ban, unban, see reports, freeze abusive accounts.
+	•	Metrics: match rate, time to match, completion rate, reports per 100 rides, churn, trial conversion.
+
+What you can drop
+	•	Any rider or driver payouts, cost splitting, Stripe Connect, KYC for payouts.
+	•	Right to work checks.
+	•	Marketplace tax handling. Keep standard VAT on subscription invoices only.
+
+Suggested backlog changes
+
+P0
+	1.	Auth with hashed passwords and JWT or cookie sessions. Rate limiting and CORS.
+	2.	Swap in-memory storage to Postgres. Add tables: subscriptions, offers, requests, matches, messages, reports, user_ratings.
+	3.	Stripe checkout, webhooks, and portal. Middleware for entitlements.
+	4.	User-scoped sockets and live location opt-in after match.
+	5.	Report/block, abuse keywords filter, and admin actions.
+
+P1
+	1.	Route-time scoring using OSRM or Mapbox to compute detour minutes and ETA fit.
+	2.	Saved depots and common routes. One-tap repost.
+	3.	Safety page and onboarding checklist. Optional photo verification.
+	4.	PWA install prompt and background location permission education.

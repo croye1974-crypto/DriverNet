@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Star, Trophy, TrendingUp, Award, Zap, Target } from "lucide-react";
-import type { UserStats, UserBadge, Badge as BadgeType } from "@shared/schema";
+import type { UserStats, UserBadge, Badge as BadgeType, SelectUser } from "@shared/schema";
 
 const currentUserId = "user-1"; // Mock - will be replaced with real auth
 
@@ -23,6 +23,10 @@ const getTierConfig = (tier: string) => {
 };
 
 export default function Profile() {
+  const { data: user, isLoading: userLoading } = useQuery<SelectUser>({
+    queryKey: ["/api/users", currentUserId],
+  });
+
   const { data: stats, isLoading: statsLoading } = useQuery<UserStats>({
     queryKey: ["/api/users", currentUserId, "stats"],
   });
@@ -50,7 +54,7 @@ export default function Profile() {
     ? 100 
     : Math.max(0, Math.min(100, ((reputationScore - tierBounds.lower) / (tierBounds.upper - tierBounds.lower + 1)) * 100));
 
-  if (statsLoading) {
+  if (userLoading || statsLoading) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-muted-foreground">Loading profile...</div>
@@ -70,8 +74,13 @@ export default function Profile() {
             </Avatar>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-2xl font-bold" data-testid="text-profile-name">John Smith</h1>
+                <h1 className="text-2xl font-bold" data-testid="text-profile-name">{user?.name || 'John Smith'}</h1>
                 <Badge variant="outline" className="text-xs">✓ Verified</Badge>
+              </div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="secondary" className="font-mono" data-testid="text-call-sign">
+                  {user?.callSign || 'JS1234'}
+                </Badge>
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
