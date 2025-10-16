@@ -64,7 +64,7 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="flex items-center justify-between p-4 border-b bg-card">
+      <header className="flex items-center justify-between py-2 px-4 border-b bg-card">
         <img 
           src={logoUrl} 
           alt="DriveNet" 
