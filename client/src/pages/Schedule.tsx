@@ -374,6 +374,7 @@ export default function Schedule() {
             scheduleId={currentSchedule.id}
             jobCount={jobs.length}
             existingJobs={jobs}
+            scheduleDate={selectedDate}
           />
           {selectedJob && (() => {
             // Find the index of the selected job in the sorted jobs array

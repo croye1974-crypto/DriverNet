@@ -19,9 +19,10 @@ interface AddJobDialogProps {
   scheduleId: string;
   jobCount: number;
   existingJobs: Job[];
+  scheduleDate: string;
 }
 
-const createJobFormSchema = (lastJobEndTime?: string) => z.object({
+const createJobFormSchema = (lastJobEndTime?: string, scheduleDate?: string) => z.object({
   fromPostcode: z.string().optional(),
   fromLocation: z.string().min(1, "Pickup location is required"),
   fromLat: z.number(),
@@ -41,6 +42,16 @@ const createJobFormSchema = (lastJobEndTime?: string) => z.object({
   message: "End time must be after start time",
   path: ["estimatedEndTime"],
 }).refine((data) => {
+  // Validate that job date matches schedule date
+  if (scheduleDate) {
+    const jobDate = data.estimatedStartTime.split('T')[0]; // Get YYYY-MM-DD part
+    return jobDate === scheduleDate;
+  }
+  return true;
+}, {
+  message: "Job must be scheduled for the selected date",
+  path: ["estimatedStartTime"],
+}).refine((data) => {
   // Validate that new job starts after previous job ends
   if (lastJobEndTime) {
     const lastJobEnd = new Date(lastJobEndTime);
@@ -55,23 +66,36 @@ const createJobFormSchema = (lastJobEndTime?: string) => z.object({
 
 type JobFormValues = z.infer<ReturnType<typeof createJobFormSchema>>;
 
-// Helper to get default times (today, rounded to next 15-min interval)
-const getDefaultTimes = () => {
+// Helper to get default times for a specific date, rounded to next 15-min interval
+const getDefaultTimes = (scheduleDate: string) => {
+  // Parse the schedule date (YYYY-MM-DD format)
+  const [year, month, day] = scheduleDate.split('-').map(Number);
+  
+  // Check if schedule date is today
   const now = new Date();
-  const startTime = new Date(now);
-  startTime.setMinutes(Math.ceil(startTime.getMinutes() / 15) * 15);
-  startTime.setSeconds(0);
+  const isToday = now.getFullYear() === year && now.getMonth() + 1 === month && now.getDate() === day;
+  
+  let startTime: Date;
+  if (isToday) {
+    // If today, use current time rounded to next 15-min interval
+    startTime = new Date();
+    startTime.setMinutes(Math.ceil(startTime.getMinutes() / 15) * 15);
+    startTime.setSeconds(0);
+  } else {
+    // If future/past date, default to 9:00 AM
+    startTime = new Date(year, month - 1, day, 9, 0, 0);
+  }
   
   const endTime = new Date(startTime);
   endTime.setHours(endTime.getHours() + 2);
   
   const formatDateTime = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const dateYear = date.getFullYear();
+    const dateMonth = String(date.getMonth() + 1).padStart(2, '0');
+    const dateDay = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return `${dateYear}-${dateMonth}-${dateDay}T${hours}:${minutes}`;
   };
   
   return {
@@ -80,7 +104,7 @@ const getDefaultTimes = () => {
   };
 };
 
-export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount, existingJobs }: AddJobDialogProps) {
+export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount, existingJobs, scheduleDate }: AddJobDialogProps) {
   const { toast } = useToast();
   const [gettingFromLocation, setGettingFromLocation] = useState(false);
   const [gettingToLocation, setGettingToLocation] = useState(false);
@@ -92,8 +116,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     ? [...existingJobs].sort((a, b) => new Date(a.estimatedStartTime).getTime() - new Date(b.estimatedStartTime).getTime())[existingJobs.length - 1]
     : null;
 
-  const jobFormSchema = createJobFormSchema(lastJob?.estimatedEndTime);
-  const defaultTimes = getDefaultTimes();
+  const jobFormSchema = createJobFormSchema(lastJob?.estimatedEndTime, scheduleDate);
+  const defaultTimes = getDefaultTimes(scheduleDate);
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -114,11 +138,11 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   // Reset times when dialog opens
   useEffect(() => {
     if (open) {
-      const times = getDefaultTimes();
+      const times = getDefaultTimes(scheduleDate);
       form.setValue("estimatedStartTime", times.start);
       form.setValue("estimatedEndTime", times.end);
     }
-  }, [open, form]);
+  }, [open, scheduleDate, form]);
 
   // Auto-calculate journey time and end time when locations change
   useEffect(() => {
@@ -522,7 +546,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold">Timing (Defaults to Today)</h3>
+              <h3 className="text-sm font-semibold">Timing</h3>
               
               <FormField
                 control={form.control}
@@ -534,6 +558,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                       <Input
                         type="datetime-local"
                         {...field}
+                        min={`${scheduleDate}T00:00`}
+                        max={`${scheduleDate}T23:59`}
                         data-testid="input-start-time"
                       />
                     </FormControl>
@@ -552,6 +578,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                       <Input
                         type="datetime-local"
                         {...field}
+                        min={`${scheduleDate}T00:00`}
+                        max={`${scheduleDate}T23:59`}
                         data-testid="input-end-time"
                       />
                     </FormControl>
