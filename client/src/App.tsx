@@ -64,15 +64,15 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="flex items-center justify-between py-1 px-4 border-b bg-card">
+      <header className="flex items-center justify-between py-2 px-4 bg-black dark:bg-black border-b border-gray-800">
         <img 
           src={logoUrl} 
           alt="DriveNet" 
-          className="h-20 w-auto object-contain" 
+          className="h-24 w-auto object-contain" 
           data-testid="img-logo"
         />
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" data-testid="button-notifications">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800" data-testid="button-notifications">
             <Bell className="h-5 w-5" />
           </Button>
           <ThemeToggle />
