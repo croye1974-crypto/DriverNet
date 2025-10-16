@@ -153,3 +153,66 @@ The application is structured with a clear separation between frontend, backend,
     - Postcodes are structured codes, not words requiring spell checking
   - **Purpose**: Help drivers enter accurate place names to improve location matching and reduce typos
   - **Testing**: Verified on mobile (375x667) - location names have spell checking, postcodes do not
+
+### Authentication & Subscription System (P0 - Production Ready)
+- ✅ **Complete authentication system implemented**
+  - **Password Security**: bcrypt hashing (10 salt rounds) for all passwords
+  - **Session Management**: express-session with MemoryStore, 30-day cookie lifetime
+  - **Auth Routes**: 
+    - POST /api/auth/register - user registration with username uniqueness check
+    - POST /api/auth/login - credential validation with bcrypt.compare
+    - POST /api/auth/logout - session destruction
+    - GET /api/auth/me - returns current authenticated user (without password)
+  - **Demo Credentials**: All demo users (john_driver, sarah_delivers, mike_transport, emma_driver) use password 'demo' (hashed)
+  - **Testing**: Verified login flow with hashed passwords
+
+- ✅ **Subscription infrastructure & access control**
+  - **Schema Updates** (users table):
+    - stripeCustomerId: Stripe customer identifier
+    - subscriptionStatus: 'active' | 'inactive' | 'trialing' | 'past_due' | 'canceled'
+    - currentPeriodEnd: subscription expiration date
+    - planId: subscription plan identifier
+    - role: 'user' | 'moderator' | 'admin' for access control
+    - createdAt: user registration timestamp
+  - **Middleware**:
+    - requireAuth: ensures user is authenticated via session
+    - requireActiveSub: checks subscription_status is 'active' or 'trialing'
+    - requireAdmin: ensures user has 'admin' or 'moderator' role
+  - **Storage Methods**:
+    - updateUserSubscription: updates Stripe customer/subscription data
+    - Auto-creates user stats on registration
+  - **Demo Setup**: All demo users have active subscriptions (demo-plan) for testing
+
+- ✅ **Abuse control schema**
+  - **Reports Table**: userId, reportedUserId, reason, description, status (pending/reviewed/resolved/dismissed), createdAt
+  - **Blocks Table**: blockerId, blockedId, createdAt for user blocking functionality
+  - **API Routes**: Ready for implementation (schema complete)
+
+- ✅ **Security & protection**
+  - **Rate Limiting**: 
+    - General API: 100 requests per 15 minutes
+    - Auth endpoints: 5 login/register attempts per 15 minutes
+  - **CORS**: Configured for dev (allow all) and prod (specific CLIENT_URL)
+  - **Trust Proxy**: Enabled for Replit environment (handles X-Forwarded-For headers)
+  - **Secure Cookies**: httpOnly, sameSite: lax, secure in production
+  - **Password Safety**: Passwords never returned in API responses
+
+- ⏳ **Stripe integration (awaiting secrets)**
+  - Blueprint installed and ready
+  - Packages: stripe, bcrypt, express-rate-limit, cors installed
+  - Storage methods prepared: updateUserSubscription
+  - **Next Steps**: 
+    - Request STRIPE_SECRET_KEY and VITE_STRIPE_PUBLIC_KEY from user
+    - Implement checkout session creation
+    - Add webhook handlers (checkout.session.completed, subscription updates)
+    - Create customer portal for subscription management
+
+- ⏳ **Admin console & moderation features (TODO)**
+  - Admin role system complete (emma_driver is moderator for testing)
+  - Report/block schema ready
+  - **Remaining**: API routes for reports/blocks, admin UI dashboard
+
+- ⏳ **Database migration (deferred)**
+  - Currently: in-memory MemStorage (resets on server restart)
+  - Postgres configured but not migrated
+  - **Reason**: Allows rapid MVP iteration, will migrate when stable
