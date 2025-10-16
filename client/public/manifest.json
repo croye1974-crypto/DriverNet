@@ -1,0 +1,48 @@
+{
+  "name": "DriverLift - Trade Plate Driver Ride Sharing",
+  "short_name": "DriverLift",
+  "description": "Connect with fellow trade plate car delivery drivers for lifts to your next job or public transport",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A2340",
+  "theme_color": "#0A2340",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "travel"],
+  "shortcuts": [
+    {
+      "name": "Find Lifts",
+      "short_name": "Find",
+      "description": "Find drivers offering lifts",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-512.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "My Schedule",
+      "short_name": "Schedule",
+      "description": "View your delivery schedule",
+      "url": "/schedule",
+      "icons": [{ "src": "/icons/icon-512.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Check your messages",
+      "url": "/messages",
+      "icons": [{ "src": "/icons/icon-512.png", "sizes": "512x512" }]
+    }
+  ]
+}
