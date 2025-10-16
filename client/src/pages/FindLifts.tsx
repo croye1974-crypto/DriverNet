@@ -4,6 +4,7 @@ import SearchBar from "@/components/SearchBar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import LiftRequestCard from "@/components/LiftRequestCard";
 import MapView from "@/components/MapView";
+import MessageDialog from "@/components/MessageDialog";
 import { Button } from "@/components/ui/button";
 import { Map, List } from "lucide-react";
 import {
@@ -96,8 +97,21 @@ export default function FindLifts() {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [requestingLift, setRequestingLift] = useState<{id: string; driverName: string; fromLocation: string; toLocation: string} | null>(null);
   const [requestedLifts, setRequestedLifts] = useState<Set<string>>(new Set());
+  const [messageDialog, setMessageDialog] = useState<{
+    open: boolean;
+    driverName: string;
+    fromLocation: string;
+    toLocation?: string;
+    type: "offer" | "request";
+  }>({
+    open: false,
+    driverName: "",
+    fromLocation: "",
+    toLocation: "",
+    type: "offer",
+  });
 
-  const mapDrivers = mockDrivers.map((driver) => ({
+  const mapOffers = mockDrivers.map((driver) => ({
     id: driver.id,
     name: driver.driverName,
     fromLat: driver.fromLat,
@@ -106,6 +120,15 @@ export default function FindLifts() {
     toLng: driver.toLng,
     fromLocation: driver.fromLocation,
     toLocation: driver.toLocation,
+  }));
+
+  const mapRequests = mockRequests.map((request) => ({
+    id: request.id,
+    name: request.requesterName,
+    fromLat: request.fromLat,
+    fromLng: request.fromLng,
+    fromLocation: request.fromLocation,
+    toLocation: request.toLocation,
   }));
 
   const handleRequestLift = (id: string) => {
@@ -128,6 +151,32 @@ export default function FindLifts() {
         description: `Your request to join ${requestingLift.driverName}'s lift has been sent. They will be notified and can accept or decline.`,
       });
       setRequestingLift(null);
+    }
+  };
+
+  const handleOfferClick = (offerId: string) => {
+    const offer = mockDrivers.find(d => d.id === offerId);
+    if (offer) {
+      setMessageDialog({
+        open: true,
+        driverName: offer.driverName,
+        fromLocation: offer.fromLocation,
+        toLocation: offer.toLocation,
+        type: "offer",
+      });
+    }
+  };
+
+  const handleRequestClick = (requestId: string) => {
+    const request = mockRequests.find(r => r.id === requestId);
+    if (request) {
+      setMessageDialog({
+        open: true,
+        driverName: request.requesterName,
+        fromLocation: request.fromLocation,
+        toLocation: request.toLocation,
+        type: "request",
+      });
     }
   };
 
@@ -165,8 +214,10 @@ export default function FindLifts() {
       {viewMode === "map" ? (
         <div className="flex-1">
           <MapView
-            drivers={mapDrivers}
-            onDriverClick={(id) => console.log(`Selected driver ${id}`)}
+            liftOffers={mapOffers}
+            liftRequests={mapRequests}
+            onOfferClick={handleOfferClick}
+            onRequestClick={handleRequestClick}
           />
         </div>
       ) : (
@@ -229,6 +280,15 @@ export default function FindLifts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MessageDialog
+        open={messageDialog.open}
+        onOpenChange={(open) => setMessageDialog(prev => ({ ...prev, open }))}
+        driverName={messageDialog.driverName}
+        fromLocation={messageDialog.fromLocation}
+        toLocation={messageDialog.toLocation}
+        type={messageDialog.type}
+      />
     </div>
   );
 }
