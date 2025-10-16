@@ -193,8 +193,8 @@ A ride-sharing application specifically designed for trade plate car delivery dr
 
 ### Map Legend and Clickable Markers for Safe Communication
 - ✅ **Enhanced MapView component** with dual marker support
-  - Blue markers (28px circles with arrow icon) for lift offers at pickup locations
-  - Green markers (28px circles with location pin icon) for lift requests
+  - Blue markers (44px circles with arrow icon) for lift offers at pickup locations
+  - Green markers (44px circles with location pin icon) for lift requests
   - Distinct visual styling for easy identification on map
   - Click handlers on both marker types for instant messaging
   
@@ -233,6 +233,26 @@ A ride-sharing application specifically designed for trade plate car delivery dr
   - Seamless fallback for Playwright testing and restricted environments
   - Maintains full functionality without blocking user workflow
 
+### Mobile Touch Event Optimization
+- ✅ **Enhanced map markers for mobile reliability**
+  - Increased marker size from 28px to 44px (Apple's minimum touch target)
+  - Added stable `data-testid` attributes (marker-offer-{id}, marker-request-{id})
+  - Implemented dual event handling: "click tap" for mouse and touch
+  - Added `touch-action: manipulation` CSS to prevent double-tap zoom
+  - Set `tapTolerance: 20px` for "fat finger" tolerance
+  
+- ✅ **Improved accessibility**
+  - Added `role="button"` for screen reader support
+  - Added descriptive `aria-label` for each marker type
+  - Added `tabindex="0"` for keyboard navigation
+  - Set `riseOnHover: true` to bring tapped markers to front
+  
+- ✅ **Event propagation fixes**
+  - `L.DomEvent.stopPropagation(e)` prevents map pan interference
+  - `pointer-events: none` on SVG icons ensures touch hits parent div
+  - Layer cleanup preserves tile layers while removing only markers/polylines
+  - Verified tile persistence through all interactions
+
 ### Testing & Quality Assurance
 - ✅ Full end-to-end testing completed
   - Map legend visibility and content verification
@@ -243,4 +263,6 @@ A ride-sharing application specifically designed for trade plate car delivery dr
   - Zoom and pan map controls functional
   - State preservation between view switches
   - Native mobile design maintained throughout
+  - **Mobile touch events verified on 375x667 viewport**
+  - **Tile layer persistence confirmed through all interactions**
 - ✅ Architect review passed with implementation feedback incorporated
