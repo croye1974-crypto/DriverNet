@@ -107,6 +107,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertJobSchema.parse(req.body);
       const job = await storage.createJob(validatedData);
+      
+      // Check for matching schedules (within 3km and 60 minutes)
+      const matches = await storage.findMatchingSchedules(job.id, 3, 60);
+      
+      if (matches.length > 0) {
+        // Get the schedule and user for the new job
+        const schedule = await storage.getSchedule(job.scheduleId);
+        if (schedule) {
+          const currentUser = await storage.getUser(schedule.userId);
+          
+          // Create system messages and send WebSocket notifications for each match
+          for (const match of matches) {
+            const time = new Date(job.estimatedEndTime).toLocaleTimeString('en-GB', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            });
+            
+            await storage.createScheduleMatchMessage(
+              schedule.userId,
+              match.scheduleUserId,
+              job.toLocation,
+              time,
+              match.distance
+            );
+
+            // Broadcast WebSocket notification to both drivers
+            if (currentUser) {
+              (app as any).broadcastNotification({
+                type: 'schedule-match',
+                userId: schedule.userId,
+                matchedWith: match.userName,
+                matchedUserId: match.scheduleUserId,
+                location: job.toLocation,
+                time,
+                distance: match.distance,
+                message: `Schedule match! You'll both be near ${job.toLocation} around ${time}`,
+              });
+
+              (app as any).broadcastNotification({
+                type: 'schedule-match',
+                userId: match.scheduleUserId,
+                matchedWith: currentUser.name,
+                matchedUserId: schedule.userId,
+                location: job.toLocation,
+                time,
+                distance: match.distance,
+                message: `Schedule match! You'll both be near ${job.toLocation} around ${time}`,
+              });
+            }
+          }
+        }
+      }
+      
       res.json(job);
     } catch (error) {
       if (error instanceof Error && error.name === "ZodError") {

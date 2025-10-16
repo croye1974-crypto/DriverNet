@@ -45,6 +45,7 @@ export interface IStorage {
   updateJobStatus(id: string, status: string, actualStartTime?: Date, actualEndTime?: Date, checkInLat?: number, checkInLng?: number, checkOutLat?: number, checkOutLng?: number): Promise<Job | undefined>;
   updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
+  findMatchingSchedules(jobId: string, maxDistanceKm: number, maxTimeWindowMinutes: number): Promise<{ job: Job, distance: number, timeDifferenceMinutes: number, scheduleUserId: string, userName: string }[]>;
   
   // Lift Offers
   createLiftOffer(offer: InsertLiftOffer): Promise<LiftOffer>;
@@ -72,6 +73,7 @@ export interface IStorage {
     timestamp: string;
     unreadCount: number;
   }[]>;
+  createScheduleMatchMessage(user1Id: string, user2Id: string, location: string, time: string, distance: number): Promise<Message[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -305,6 +307,62 @@ export class MemStorage implements IStorage {
     return this.jobs.delete(id);
   }
 
+  async findMatchingSchedules(
+    jobId: string,
+    maxDistanceKm: number = 3, // Default 3km for pickup coordination
+    maxTimeWindowMinutes: number = 60 // Default 1 hour window
+  ): Promise<{ job: Job, distance: number, timeDifferenceMinutes: number, scheduleUserId: string, userName: string }[]> {
+    const sourceJob = await this.getJob(jobId);
+    if (!sourceJob) return [];
+
+    const sourceSchedule = await this.getSchedule(sourceJob.scheduleId);
+    if (!sourceSchedule) return [];
+
+    const matches: { job: Job, distance: number, timeDifferenceMinutes: number, scheduleUserId: string, userName: string }[] = [];
+
+    // Check all jobs for matches
+    for (const job of this.jobs.values()) {
+      // Skip the source job
+      if (job.id === jobId) continue;
+
+      const schedule = await this.getSchedule(job.scheduleId);
+      if (!schedule) continue;
+
+      // Skip same user
+      if (schedule.userId === sourceSchedule.userId) continue;
+
+      // Check destination proximity
+      const distance = calculateDistance(
+        sourceJob.toLat,
+        sourceJob.toLng,
+        job.toLat,
+        job.toLng
+      );
+
+      if (distance <= maxDistanceKm) {
+        // Check time proximity (using estimated end times)
+        const sourceTime = new Date(sourceJob.estimatedEndTime).getTime();
+        const targetTime = new Date(job.estimatedEndTime).getTime();
+        const timeDifferenceMs = Math.abs(sourceTime - targetTime);
+        const timeDifferenceMinutes = timeDifferenceMs / (1000 * 60);
+
+        if (timeDifferenceMinutes <= maxTimeWindowMinutes) {
+          const user = await this.getUser(schedule.userId);
+          matches.push({
+            job,
+            distance,
+            timeDifferenceMinutes,
+            scheduleUserId: schedule.userId,
+            userName: user?.name || 'Unknown Driver',
+          });
+        }
+      }
+    }
+
+    // Sort by distance (closest first)
+    return matches.sort((a, b) => a.distance - b.distance);
+  }
+
   // Lift Offers
   async createLiftOffer(insertOffer: InsertLiftOffer): Promise<LiftOffer> {
     const id = randomUUID();
@@ -486,6 +544,50 @@ export class MemStorage implements IStorage {
     });
 
     return conversations.sort((a, b) => b.sortTime - a.sortTime).map(({ sortTime, ...conv }) => conv);
+  }
+
+  async createScheduleMatchMessage(
+    user1Id: string, 
+    user2Id: string, 
+    location: string, 
+    time: string, 
+    distance: number
+  ): Promise<Message[]> {
+    const user1 = await this.getUser(user1Id);
+    const user2 = await this.getUser(user2Id);
+    
+    if (!user1 || !user2) return [];
+
+    const distanceText = distance < 1 
+      ? `${Math.round(distance * 1000)}m` 
+      : `${distance.toFixed(1)}km`;
+
+    // Message to user1 about user2
+    const messageContent1 = `🚗 Schedule Match! Your route matches ${user2.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
+    
+    const message1: Message = {
+      id: randomUUID(),
+      senderId: 'system',
+      receiverId: user1Id,
+      content: messageContent1,
+      createdAt: new Date(),
+    };
+    
+    // Message to user2 about user1
+    const messageContent2 = `🚗 Schedule Match! Your route matches ${user1.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
+    
+    const message2: Message = {
+      id: randomUUID(),
+      senderId: 'system',
+      receiverId: user2Id,
+      content: messageContent2,
+      createdAt: new Date(),
+    };
+
+    this.messages.set(message1.id, message1);
+    this.messages.set(message2.id, message2);
+
+    return [message1, message2];
   }
 }
 
