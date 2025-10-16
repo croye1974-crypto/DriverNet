@@ -33,6 +33,14 @@ export default function MessageDialog({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
+  // Clear message when dialog closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setMessage("");
+    }
+    onOpenChange(newOpen);
+  };
+
   const handleSend = async () => {
     if (!message.trim()) {
       toast({
@@ -58,7 +66,7 @@ export default function MessageDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" data-testid="dialog-message">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
