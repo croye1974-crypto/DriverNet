@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
+  callSign: varchar("call_sign", { length: 6 }).notNull().unique(), // Format: LL#### (e.g., AB1234)
   avatar: text("avatar"),
   rating: real("rating").default(0),
   totalTrips: integer("total_trips").default(0),

@@ -27,6 +27,14 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+function generateCallSign(): string {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const letter1 = letters[Math.floor(Math.random() * letters.length)];
+  const letter2 = letters[Math.floor(Math.random() * letters.length)];
+  const numbers = Math.floor(1000 + Math.random() * 9000); // 1000-9999
+  return `${letter1}${letter2}${numbers}`;
+}
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -135,10 +143,10 @@ export class MemStorage implements IStorage {
     }
 
     const demoUsers: User[] = [
-      { id: 'user-1', username: 'john_driver', password: 'demo', name: 'John Smith', avatar: null, rating: 4.8, totalTrips: 156, verified: true },
-      { id: 'user-2', username: 'sarah_delivers', password: 'demo', name: 'Sarah Johnson', avatar: null, rating: 4.9, totalTrips: 203, verified: true },
-      { id: 'user-3', username: 'mike_transport', password: 'demo', name: 'Mike Williams', avatar: null, rating: 4.7, totalTrips: 98, verified: true },
-      { id: 'user-4', username: 'emma_driver', password: 'demo', name: 'Emma Brown', avatar: null, rating: 4.6, totalTrips: 134, verified: true },
+      { id: 'user-1', username: 'john_driver', password: 'demo', name: 'John Smith', callSign: 'JS1234', avatar: null, rating: 4.8, totalTrips: 156, verified: true },
+      { id: 'user-2', username: 'sarah_delivers', password: 'demo', name: 'Sarah Johnson', callSign: 'SJ5678', avatar: null, rating: 4.9, totalTrips: 203, verified: true },
+      { id: 'user-3', username: 'mike_transport', password: 'demo', name: 'Mike Williams', callSign: 'MW9012', avatar: null, rating: 4.7, totalTrips: 98, verified: true },
+      { id: 'user-4', username: 'emma_driver', password: 'demo', name: 'Emma Brown', callSign: 'EB3456', avatar: null, rating: 4.6, totalTrips: 134, verified: true },
     ];
 
     demoUsers.forEach(user => {
