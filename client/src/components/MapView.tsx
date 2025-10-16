@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -31,6 +31,33 @@ interface MapViewProps {
   onRequestClick?: (requestId: string) => void;
 }
 
+// Calculate marker size based on zoom level (optimized for 2000+ markers on mobile)
+function getMarkerSize(zoom: number): number {
+  // zoom 5-6: 10px (country view)
+  // zoom 7-8: 14px (region view)
+  // zoom 9-10: 20px (city view)
+  // zoom 11+: 32px (street view - fully zoomed in)
+  if (zoom <= 6) return 10;
+  if (zoom <= 8) return 14;
+  if (zoom <= 10) return 20;
+  if (zoom <= 12) return 26;
+  return 32;
+}
+
+function getIconSize(zoom: number): number {
+  const markerSize = getMarkerSize(zoom);
+  // Icon should be proportional to marker - roughly 50-60%
+  return Math.max(8, Math.floor(markerSize * 0.55));
+}
+
+function getBorderWidth(zoom: number): number {
+  const markerSize = getMarkerSize(zoom);
+  // Border scales with marker size
+  if (markerSize <= 10) return 1;
+  if (markerSize <= 14) return 2;
+  return 2;
+}
+
 export default function MapView({
   liftOffers = [],
   liftRequests = [],
@@ -41,6 +68,8 @@ export default function MapView({
 }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const [currentZoom, setCurrentZoom] = useState(zoom);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -48,7 +77,7 @@ export default function MapView({
     // Initialize map with mobile tap support
     const map = L.map(mapContainerRef.current, {
       tap: true,
-      tapTolerance: 20, // Larger touch tolerance for mobile
+      tapTolerance: 25, // Large touch tolerance for small markers
       touchZoom: true,
     }).setView(center, zoom);
     mapRef.current = map;
@@ -85,6 +114,11 @@ export default function MapView({
     });
     new LegendControl().addTo(map);
 
+    // Listen for zoom changes to update marker sizes
+    map.on('zoomend', () => {
+      setCurrentZoom(map.getZoom());
+    });
+
     return () => {
       map.remove();
       mapRef.current = null;
@@ -104,20 +138,24 @@ export default function MapView({
       // Don't remove tile layers (L.TileLayer) or controls
     });
 
+    markersRef.current = [];
     const bounds = L.latLngBounds([]);
 
-    // Add lift offer markers (blue)
+    const markerSize = getMarkerSize(currentZoom);
+    const iconSize = getIconSize(currentZoom);
+    const borderWidth = getBorderWidth(currentZoom);
+
+    // Add lift offer markers (blue) - zoom responsive
     liftOffers.forEach((offer) => {
-      // Pickup marker for lift offer (blue) - 44px for mobile touch target
       const offerIcon = L.divIcon({
         className: "custom-marker",
         html: `
-          <div data-testid="marker-offer-${offer.id}" data-marker-id="${offer.id}" data-marker-type="offer" role="button" aria-label="Lift offer from ${offer.fromLocation}" tabindex="0" style="background-color: #3b82f6; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          <div data-testid="marker-offer-${offer.id}" data-marker-id="${offer.id}" data-marker-type="offer" role="button" aria-label="Lift offer from ${offer.fromLocation}" tabindex="0" style="background-color: #3b82f6; width: ${markerSize}px; height: ${markerSize}px; border-radius: 50%; border: ${borderWidth}px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
           </div>
         `,
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+        iconSize: [markerSize, markerSize],
+        iconAnchor: [markerSize / 2, markerSize / 2],
       });
 
       const offerMarker = L.marker([offer.fromLat, offer.fromLng], {
@@ -134,6 +172,8 @@ export default function MapView({
         });
       }
 
+      markersRef.current.push(offerMarker);
+
       // Extend bounds
       bounds.extend([offer.fromLat, offer.fromLng]);
       if (offer.toLat && offer.toLng) {
@@ -141,17 +181,17 @@ export default function MapView({
       }
     });
 
-    // Add lift request markers (green)
+    // Add lift request markers (green) - zoom responsive
     liftRequests.forEach((request) => {
       const requestIcon = L.divIcon({
         className: "custom-marker",
         html: `
-          <div data-testid="marker-request-${request.id}" data-marker-id="${request.id}" data-marker-type="request" role="button" aria-label="Lift request from ${request.fromLocation}" tabindex="0" style="background-color: #22c55e; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <div data-testid="marker-request-${request.id}" data-marker-id="${request.id}" data-marker-type="request" role="button" aria-label="Lift request from ${request.fromLocation}" tabindex="0" style="background-color: #22c55e; width: ${markerSize}px; height: ${markerSize}px; border-radius: 50%; border: ${borderWidth}px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           </div>
         `,
-        iconSize: [44, 44],
-        iconAnchor: [22, 44],
+        iconSize: [markerSize, markerSize],
+        iconAnchor: [markerSize / 2, markerSize],
       });
 
       const requestMarker = L.marker([request.fromLat, request.fromLng], {
@@ -168,15 +208,35 @@ export default function MapView({
         });
       }
 
+      markersRef.current.push(requestMarker);
+
       // Extend bounds
       bounds.extend([request.fromLat, request.fromLng]);
     });
 
-    // Fit map to show all markers
-    if (liftOffers.length > 0 || liftRequests.length > 0) {
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }, [liftOffers, liftRequests, onOfferClick, onRequestClick]);
+  }, [liftOffers, liftRequests, onOfferClick, onRequestClick, currentZoom]);
+
+  // Separate effect for fitBounds - only runs when data changes, not zoom
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (liftOffers.length === 0 && liftRequests.length === 0) return;
+
+    const map = mapRef.current;
+    const bounds = L.latLngBounds([]);
+
+    liftOffers.forEach((offer) => {
+      bounds.extend([offer.fromLat, offer.fromLng]);
+      if (offer.toLat && offer.toLng) {
+        bounds.extend([offer.toLat, offer.toLng]);
+      }
+    });
+
+    liftRequests.forEach((request) => {
+      bounds.extend([request.fromLat, request.fromLng]);
+    });
+
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }, [liftOffers, liftRequests]); // Only when data changes, not zoom
 
   return (
     <div

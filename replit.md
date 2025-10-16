@@ -54,3 +54,27 @@ The application is structured with a clear separation between frontend, backend,
 - **Form Management**: `react-hook-form`
 - **Mapping**: Leaflet
 - **External API**: postcodes.io (for UK postcode lookup)
+
+## Recent Changes (October 16, 2025)
+
+### Zoom-Responsive Map Markers
+- ✅ **Dynamic marker scaling for 2000+ users on mobile**
+  - Markers scale based on zoom level to prevent overcrowding
+  - **Marker sizes by zoom level:**
+    - Zoom ≤6 (country view): 10px
+    - Zoom 7-8 (region view): 14px
+    - Zoom 9-10 (city view): 20px
+    - Zoom 11-12 (neighborhood): 26px
+    - Zoom ≥13 (street view): 32px
+  - Icons and borders scale proportionally with marker size
+  - Touch tolerance increased to 25px for accurate tapping of small markers
+  - Separate useEffects to handle zoom vs data changes independently
+  - Map fitBounds only triggered by data changes, not zoom changes
+  - **Verified on mobile (375x667 viewport)** - smooth scaling, remains tappable at all zoom levels
+
+### Dialog Z-Index Implementation
+- ⚠️ **Partial implementation** - works in tests, needs mobile device verification
+  - Dialog overlay: z-index 9998 (inline style)
+  - Dialog content: z-index 9999 (inline style)
+  - Map container: z-index 1
+  - May need additional mobile-specific fixes
