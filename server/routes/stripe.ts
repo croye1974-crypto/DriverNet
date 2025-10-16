@@ -7,10 +7,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
 });
 
-const PLAN_PRICES = {
-  basic: 'price_basic_monthly', // Replace with actual Stripe Price IDs
-  premium: 'price_premium_monthly',
-  enterprise: 'price_enterprise_monthly',
+const PLAN_DETAILS = {
+  basic: { name: 'Basic Plan', price: 999 }, // $9.99
+  premium: { name: 'Premium Plan', price: 1999 }, // $19.99
+  enterprise: { name: 'Enterprise Plan', price: 4999 }, // $49.99
 };
 
 export function registerStripeRoutes(app: Express) {
@@ -33,7 +33,7 @@ export function registerStripeRoutes(app: Express) {
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: `${user.username}@driverlift.app`, // Using username as email for demo
+          email: `${user.username}@driverlift.app`,
           metadata: {
             userId: user.id,
             username: user.username,
@@ -45,14 +45,27 @@ export function registerStripeRoutes(app: Express) {
         });
       }
 
-      // Create checkout session
+      // Get plan details
+      const planDetails = PLAN_DETAILS[planId as keyof typeof PLAN_DETAILS];
+
+      // Create checkout session with price_data for easy testing
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: 'subscription',
         payment_method_types: ['card'],
         line_items: [
           {
-            price: PLAN_PRICES[planId as keyof typeof PLAN_PRICES],
+            price_data: {
+              currency: 'gbp',
+              product_data: {
+                name: planDetails.name,
+                description: `DriverLift ${planDetails.name} - Monthly Subscription`,
+              },
+              unit_amount: planDetails.price,
+              recurring: {
+                interval: 'month',
+              },
+            },
             quantity: 1,
           },
         ],
@@ -78,7 +91,10 @@ export function registerStripeRoutes(app: Express) {
       const user = await storage.getUser(userId);
 
       if (!user?.stripeCustomerId) {
-        return res.status(400).json({ error: 'No subscription found' });
+        return res.status(400).json({ 
+          error: 'No subscription found',
+          message: 'Please subscribe to a plan first'
+        });
       }
 
       const session = await stripe.billingPortal.sessions.create({
@@ -87,8 +103,18 @@ export function registerStripeRoutes(app: Express) {
       });
 
       res.json({ url: session.url });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create portal session error:', error);
+      
+      // Handle Stripe portal configuration error
+      if (error.code === 'billing_portal_configuration_inactive') {
+        return res.status(503).json({ 
+          error: 'Portal not configured',
+          message: 'Customer portal is not yet configured. Please contact support.',
+          setupRequired: true
+        });
+      }
+      
       res.status(500).json({ error: 'Failed to create portal session' });
     }
   });
@@ -104,13 +130,17 @@ export function registerStripeRoutes(app: Express) {
     let event: Stripe.Event;
 
     try {
-      // In production, use webhook signing secret
-      // For now, we'll use constructed events (testing mode)
-      event = req.body;
+      // Verify webhook signature for security
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       
-      // Uncomment when you have webhook signing secret:
-      // const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-      // event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      if (webhookSecret) {
+        // Production: verify signature
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } else {
+        // Development: parse JSON (NOT for production)
+        console.warn('WARNING: STRIPE_WEBHOOK_SECRET not set - skipping signature verification');
+        event = JSON.parse(req.body.toString());
+      }
     } catch (err) {
       console.error('Webhook signature verification failed:', err);
       return res.status(400).send(`Webhook Error: ${err}`);
@@ -140,9 +170,8 @@ export function registerStripeRoutes(app: Express) {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
 
-          // Find user by Stripe customer ID
-          const users = await storage.getAllUsers();
-          const user = users.find(u => u.stripeCustomerId === customerId);
+          // Optimized lookup by Stripe customer ID
+          const user = await storage.getUserByStripeCustomerId(customerId);
 
           if (user) {
             const periodEnd = (subscription as any).current_period_end;
@@ -158,8 +187,7 @@ export function registerStripeRoutes(app: Express) {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
 
-          const users = await storage.getAllUsers();
-          const user = users.find(u => u.stripeCustomerId === customerId);
+          const user = await storage.getUserByStripeCustomerId(customerId);
 
           if (user) {
             await storage.updateUserSubscription(user.id, {
@@ -175,8 +203,7 @@ export function registerStripeRoutes(app: Express) {
           const invoice = event.data.object as Stripe.Invoice;
           const customerId = invoice.customer as string;
 
-          const users = await storage.getAllUsers();
-          const user = users.find(u => u.stripeCustomerId === customerId);
+          const user = await storage.getUserByStripeCustomerId(customerId);
 
           if (user) {
             await storage.updateUserSubscription(user.id, {
