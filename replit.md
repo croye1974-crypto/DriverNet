@@ -13,6 +13,12 @@ DriverLift is a ride-sharing application designed for trade plate car delivery d
 - I prefer to be asked before major architectural changes are made.
 - I prefer functional programming paradigms where appropriate.
 
+## Branding
+- **Logo**: DriveNet logo (attached_assets/image_1760603053099.png)
+  - Currently displayed in app header (top left corner)
+  - To be used on future login screen
+  - Blue rounded square icon with car and arrow, red/blue "DRIVENET" text
+
 ## System Architecture
 
 ### UI/UX Decisions

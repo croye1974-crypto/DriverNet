@@ -12,6 +12,7 @@ import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoUrl from "@assets/image_1760603053099.png";
 
 interface LastLocation {
   lat: number;
@@ -64,9 +65,12 @@ function AppContent() {
   return (
     <div className="h-screen flex flex-col bg-background">
       <header className="flex items-center justify-between p-4 border-b bg-card">
-        <h1 className="text-xl font-bold text-primary" data-testid="text-app-title">
-          DriverLift
-        </h1>
+        <img 
+          src={logoUrl} 
+          alt="DriveNet" 
+          className="h-10 w-auto object-contain" 
+          data-testid="img-logo"
+        />
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" data-testid="button-notifications">
             <Bell className="h-5 w-5" />
