@@ -78,7 +78,11 @@ export default function FindLifts() {
   const [requestedLifts, setRequestedLifts] = useState<Set<string>>(new Set());
   const [offeringLift, setOfferingLift] = useState<{id: string; requesterName: string; fromLocation: string; toLocation: string} | null>(null);
   const [offeredLifts, setOfferedLifts] = useState<Set<string>>(new Set());
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  // Initialize with Birmingham fallback immediately for mobile
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>({ 
+    lat: 52.4862, 
+    lng: -1.8904 
+  });
   const [messageDialog, setMessageDialog] = useState<{
     open: boolean;
     callSign: string;
@@ -105,26 +109,24 @@ export default function FindLifts() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Get user's current GPS location
+  // Get user's current GPS location (state already has Birmingham fallback)
   useEffect(() => {
     if (navigator.geolocation) {
+      // Longer timeout for mobile networks
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          // Update from fallback to actual GPS position
           setUserLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
         },
         (error) => {
-          console.log("GPS location not available:", error.message);
-          // Fallback to Birmingham, UK
-          setUserLocation({ lat: 52.4862, lng: -1.8904 });
+          console.log("GPS location not available, using fallback:", error.message);
+          // Keep Birmingham fallback (already set in initial state)
         },
-        { enableHighAccuracy: false, timeout: 5000 }
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
       );
-    } else {
-      // Fallback if geolocation not supported
-      setUserLocation({ lat: 52.4862, lng: -1.8904 });
     }
   }, []);
 
