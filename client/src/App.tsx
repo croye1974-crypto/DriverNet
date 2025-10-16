@@ -65,11 +65,11 @@ function AppContent() {
   return (
     <div className="h-screen flex flex-col bg-background">
       <header className="flex items-center justify-between py-2 px-4 bg-card border-b">
-        <div className="overflow-hidden -my-2">
+        <div className="overflow-hidden -my-1">
           <img 
             src={logoUrl} 
             alt="DriveNet" 
-            className="h-28 w-auto object-contain scale-125" 
+            className="h-24 w-auto object-contain scale-110" 
             data-testid="img-logo"
           />
         </div>
