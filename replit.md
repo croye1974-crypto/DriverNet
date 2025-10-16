@@ -47,6 +47,13 @@ The application prioritizes a native mobile app aesthetic with a light gray back
 - **Gamification**: Driver ratings (1-5 stars with KPIs), a reputation score (0-100), a tier system (Bronze, Silver, Gold, Platinum), and achievement badges (Milestone, Quality, Community, Safety).
 - **Driver Identification**: Call sign system (LL#### format) for simplified driver identification, automatically generated on user creation and displayed across various UI elements.
 - **Spell Checking**: Dynamic spell checking enabled for free-text location/place name inputs, disabled for postcode inputs.
+- **Progressive Web App (PWA)**:
+  - **Manifest**: Complete PWA manifest with app metadata, icons (192px, 512px maskable), theme colors, and app shortcuts
+  - **Service Worker**: Offline support with install precache, activate cleanup, and network-first runtime caching strategy
+  - **iOS Support**: Apple-specific meta tags for web app capability, status bar styling, and touch icon
+  - **Safe Areas**: CSS variables for iOS notched devices (iPhone X+) with proper viewport-fit configuration
+  - **Mobile Optimizations**: Dynamic viewport height (dvh), overscroll prevention, touch scrolling enhancements
+  - **Installation**: App installable as native mobile app on both iOS and Android with offline functionality
 
 ### System Design Choices
 The application features clear separation between frontend, backend, and shared components for maintainability and scalability. An in-memory database supports rapid MVP development. WebSockets provide real-time experiences. The design prioritizes mobile-first usability and accessibility.
