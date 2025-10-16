@@ -231,22 +231,13 @@ export default function Schedule() {
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="p-4 bg-card space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold" data-testid="text-schedule-title">My Schedule</h2>
-            <p className="text-sm text-muted-foreground" data-testid="text-schedule-date">
-              {selectedDate && !isNaN(new Date(selectedDate).getTime()) 
-                ? format(new Date(selectedDate), "EEEE, MMMM d, yyyy")
-                : "Select a date"}
-            </p>
-          </div>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-2 rounded-md bg-background text-sm shadow-sm"
-            data-testid="input-date"
-          />
+        <div>
+          <h2 className="text-xl font-semibold" data-testid="text-schedule-title">My Schedule</h2>
+          <p className="text-sm text-muted-foreground" data-testid="text-schedule-date">
+            {selectedDate && !isNaN(new Date(selectedDate).getTime()) 
+              ? format(new Date(selectedDate), "EEEE, MMMM d, yyyy")
+              : "Select a date"}
+          </p>
         </div>
 
         <Button
