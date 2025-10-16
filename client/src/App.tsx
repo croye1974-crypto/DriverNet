@@ -64,7 +64,7 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="flex items-center justify-between py-2 px-4 bg-black dark:bg-black border-b border-gray-800">
+      <header className="flex items-center justify-between py-2 px-4 bg-card border-b">
         <div className="overflow-hidden -my-2">
           <img 
             src={logoUrl} 
@@ -74,7 +74,7 @@ function AppContent() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800" data-testid="button-notifications">
+          <Button variant="ghost" size="icon" data-testid="button-notifications">
             <Bell className="h-5 w-5" />
           </Button>
           <ThemeToggle />
