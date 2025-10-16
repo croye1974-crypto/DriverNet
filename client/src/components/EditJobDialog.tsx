@@ -31,6 +31,14 @@ const editJobFormSchema = z.object({
   toLng: z.number(),
   estimatedStartTime: z.string().min(1, "Start time is required"),
   estimatedEndTime: z.string().min(1, "End time is required"),
+}).refine((data) => {
+  // Validate that end time is after start time
+  const startDate = new Date(data.estimatedStartTime);
+  const endDate = new Date(data.estimatedEndTime);
+  return endDate > startDate;
+}, {
+  message: "End time must be after start time",
+  path: ["estimatedEndTime"],
 });
 
 type EditJobFormValues = z.infer<typeof editJobFormSchema>;
@@ -68,9 +76,22 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId }: E
     },
   });
 
-  // Reset form when job changes
+  // Helper function to calculate and set journey time
+  const calculateAndSetJourneyTime = (fromLat: number, fromLng: number, toLat: number, toLng: number, startTime: string) => {
+    if (fromLat && fromLng && toLat && toLng && fromLat !== 0 && fromLng !== 0 && toLat !== 0 && toLng !== 0 && startTime) {
+      const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
+      const startDate = new Date(startTime);
+      const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
+      const formattedEnd = endDate.toISOString().slice(0, 16);
+      form.setValue("estimatedEndTime", formattedEnd);
+    }
+  };
+
+  // Reset form when job changes AND recalculate journey time
   useEffect(() => {
     if (open && job) {
+      const startTime = formatDateForInput(job.estimatedStartTime);
+      
       form.reset({
         fromPostcode: "",
         fromLocation: job.fromLocation,
@@ -80,9 +101,14 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId }: E
         toLocation: job.toLocation,
         toLat: job.toLat,
         toLng: job.toLng,
-        estimatedStartTime: formatDateForInput(job.estimatedStartTime),
+        estimatedStartTime: startTime,
         estimatedEndTime: formatDateForInput(job.estimatedEndTime),
       });
+
+      // Recalculate journey time immediately after loading job data
+      setTimeout(() => {
+        calculateAndSetJourneyTime(job.fromLat, job.fromLng, job.toLat, job.toLng, startTime);
+      }, 0);
     }
   }, [open, job, form]);
 
@@ -91,16 +117,8 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId }: E
     const subscription = form.watch((value, { name }) => {
       if (name === "fromLat" || name === "fromLng" || name === "toLat" || name === "toLng" || name === "estimatedStartTime") {
         const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = value;
-        
-        if (fromLat && fromLng && toLat && toLng && fromLat !== 0 && fromLng !== 0 && toLat !== 0 && toLng !== 0) {
-          const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
-          
-          if (estimatedStartTime) {
-            const startDate = new Date(estimatedStartTime);
-            const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
-            const formattedEnd = endDate.toISOString().slice(0, 16);
-            form.setValue("estimatedEndTime", formattedEnd);
-          }
+        if (fromLat && fromLng && toLat && toLng && estimatedStartTime) {
+          calculateAndSetJourneyTime(fromLat, fromLng, toLat, toLng, estimatedStartTime);
         }
       }
     });

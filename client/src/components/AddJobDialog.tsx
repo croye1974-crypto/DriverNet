@@ -31,12 +31,13 @@ const jobFormSchema = z.object({
   estimatedStartTime: z.string().min(1, "Start time is required"),
   estimatedEndTime: z.string().min(1, "End time is required"),
 }).refine((data) => {
-  // If GPS coordinates are 0,0 for either location, use Manchester as fallback
-  const hasValidFromCoords = data.fromLat !== 0 && data.fromLng !== 0;
-  const hasValidToCoords = data.toLat !== 0 && data.toLng !== 0;
-  return true; // Always allow - will use fallback coordinates
+  // Validate that end time is after start time
+  const startDate = new Date(data.estimatedStartTime);
+  const endDate = new Date(data.estimatedEndTime);
+  return endDate > startDate;
 }, {
-  message: "Location coordinates will use fallback if postcode lookup fails",
+  message: "End time must be after start time",
+  path: ["estimatedEndTime"],
 });
 
 type JobFormValues = z.infer<typeof jobFormSchema>;
