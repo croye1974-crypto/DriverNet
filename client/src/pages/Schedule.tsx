@@ -221,12 +221,11 @@ export default function Schedule() {
 
         <Button
           onClick={handleAddJob}
-          size="lg"
-          className="w-full"
+          className="w-full h-14 text-lg font-semibold"
           disabled={createSchedule.isPending || schedulesLoading || schedulesError}
           data-testid="button-add-job"
         >
-          <Plus className="h-5 w-5 mr-2" />
+          <Plus className="h-6 w-6 mr-2" />
           Add Delivery Job
         </Button>
       </div>
@@ -258,12 +257,14 @@ export default function Schedule() {
         )}
 
         {!schedulesLoading && !schedulesFetching && !isLoading && !jobsError && sortedJobs.length === 0 && (
-          <Card className="p-8 text-center">
-            <p className="text-muted-foreground" data-testid="text-empty-schedule">No deliveries scheduled for this day</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Add your first delivery to get started
-            </p>
-          </Card>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="text-center">
+              <p className="text-muted-foreground text-lg" data-testid="text-empty-schedule">No deliveries scheduled for this day</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Add your first delivery to get started
+              </p>
+            </div>
+          </div>
         )}
 
         <div className="space-y-2">
