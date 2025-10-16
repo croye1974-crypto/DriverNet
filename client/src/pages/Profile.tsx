@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Star, Trophy, TrendingUp, Award, Zap, Target } from "lucide-react";
+import { Star, Trophy, TrendingUp, Award, Zap, Target, Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -39,6 +39,8 @@ export default function Profile() {
   const { toast } = useToast();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   
   const { data: user, isLoading: userLoading } = useQuery<SelectUser>({
     queryKey: ["/api/users", currentUserId],
@@ -53,8 +55,8 @@ export default function Profile() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest("PATCH", `/api/users/${currentUserId}`, { name });
+    mutationFn: async (data: { name?: string; email?: string; phone?: string }) => {
+      const response = await apiRequest("PATCH", `/api/users/${currentUserId}`, data);
       return response.json();
     },
     onSuccess: () => {
@@ -102,12 +104,39 @@ export default function Profile() {
 
   const handleEditProfile = () => {
     setEditName(user?.name || "");
+    setEditEmail(user?.email || "");
+    setEditPhone(user?.phone || "");
     setEditDialogOpen(true);
   };
 
   const handleSaveProfile = () => {
-    if (editName.trim()) {
-      updateProfileMutation.mutate(editName.trim());
+    if (!editName.trim()) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updates: { name?: string; email?: string; phone?: string } = {};
+    
+    // Only include changed fields
+    if (editName.trim() !== user?.name) {
+      updates.name = editName.trim();
+    }
+    if (editEmail.trim() !== (user?.email || "")) {
+      updates.email = editEmail.trim() || "";
+    }
+    if (editPhone.trim() !== (user?.phone || "")) {
+      updates.phone = editPhone.trim() || "";
+    }
+
+    // Only mutate if there are actual changes
+    if (Object.keys(updates).length > 0) {
+      updateProfileMutation.mutate(updates);
+    } else {
+      setEditDialogOpen(false);
     }
   };
 
@@ -211,6 +240,31 @@ export default function Profile() {
           </Card>
         </div>
 
+        {/* Contact Information */}
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Contact Details</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="text-sm" data-testid="text-email">
+                  {user?.email || <span className="text-muted-foreground italic">Not provided</span>}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Phone</p>
+                <p className="text-sm" data-testid="text-phone">
+                  {user?.phone || <span className="text-muted-foreground italic">Not provided</span>}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Performance Metrics */}
         <Card className="p-4">
           <h3 className="font-semibold mb-3">Performance</h3>
@@ -305,18 +359,40 @@ export default function Profile() {
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
             <DialogDescription>
-              Update your profile information. Your call sign cannot be changed.
+              Update your driver details. Your call sign cannot be changed.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Full Name *</Label>
               <Input
                 id="name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder="Enter your full name"
                 data-testid="input-edit-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                data-testid="input-edit-email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="07123456789"
+                data-testid="input-edit-phone"
               />
             </div>
             <div className="space-y-2">

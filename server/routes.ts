@@ -8,7 +8,8 @@ import {
   insertLiftOfferSchema, 
   insertLiftRequestSchema,
   insertMessageSchema,
-  insertRatingSchema 
+  insertRatingSchema,
+  updateUserProfileSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -649,13 +650,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
-      const { name } = req.body;
+      const validated = updateUserProfileSchema.parse(req.body);
       
-      if (!name || typeof name !== 'string' || !name.trim()) {
-        return res.status(400).json({ error: "Name is required" });
-      }
+      const updates: any = {};
+      if (validated.name) updates.name = validated.name.trim();
+      if (validated.email !== undefined) updates.email = validated.email || null;
+      if (validated.phone !== undefined) updates.phone = validated.phone || null;
       
-      const updatedUser = await storage.updateUser(userId, { name: name.trim() });
+      const updatedUser = await storage.updateUser(userId, updates);
       
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
@@ -665,6 +667,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
     } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid user data", details: error });
+      }
       console.error("Update user error:", error);
       res.status(500).json({ error: "Failed to update user" });
     }

@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(), // bcrypt hashed
   name: text("name").notNull(),
   callSign: varchar("call_sign", { length: 6 }).notNull().unique(), // Format: LL#### (e.g., AB1234)
+  email: text("email"),
+  phone: text("phone"),
   avatar: text("avatar"),
   role: text("role").notNull().default("user"), // user, moderator, admin
   rating: real("rating").default(0),
@@ -171,7 +173,18 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   name: true,
+  email: true,
+  phone: true,
   avatar: true,
+}).extend({
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").optional().or(z.literal("")),
+});
+
+export const updateUserProfileSchema = z.object({
+  name: z.string().min(1, "Name is required").optional(),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").optional().or(z.literal("")),
 });
 
 export const insertScheduleSchema = createInsertSchema(schedules).omit({
