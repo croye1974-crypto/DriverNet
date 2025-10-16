@@ -11,15 +11,17 @@ import { MapPin, Loader2, Search, Navigation } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { estimateJourneyTime, formatDuration, formatDistance, calculateDistance } from "@/lib/journey";
+import type { Job } from "@shared/schema";
 
 interface AddJobDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scheduleId: string;
   jobCount: number;
+  existingJobs: Job[];
 }
 
-const jobFormSchema = z.object({
+const createJobFormSchema = (lastJobEndTime?: string) => z.object({
   fromPostcode: z.string().optional(),
   fromLocation: z.string().min(1, "Pickup location is required"),
   fromLat: z.number(),
@@ -38,9 +40,20 @@ const jobFormSchema = z.object({
 }, {
   message: "End time must be after start time",
   path: ["estimatedEndTime"],
+}).refine((data) => {
+  // Validate that new job starts after previous job ends
+  if (lastJobEndTime) {
+    const lastJobEnd = new Date(lastJobEndTime);
+    const newJobStart = new Date(data.estimatedStartTime);
+    return newJobStart >= lastJobEnd;
+  }
+  return true;
+}, {
+  message: "Job must start after the previous job ends",
+  path: ["estimatedStartTime"],
 });
 
-type JobFormValues = z.infer<typeof jobFormSchema>;
+type JobFormValues = z.infer<ReturnType<typeof createJobFormSchema>>;
 
 // Helper to get default times (today, rounded to next 15-min interval)
 const getDefaultTimes = () => {
@@ -67,13 +80,19 @@ const getDefaultTimes = () => {
   };
 };
 
-export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount }: AddJobDialogProps) {
+export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount, existingJobs }: AddJobDialogProps) {
   const { toast } = useToast();
   const [gettingFromLocation, setGettingFromLocation] = useState(false);
   const [gettingToLocation, setGettingToLocation] = useState(false);
   const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
   const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
 
+  // Find the last job in the schedule (sorted by estimated start time)
+  const lastJob = existingJobs.length > 0 
+    ? [...existingJobs].sort((a, b) => new Date(a.estimatedStartTime).getTime() - new Date(b.estimatedStartTime).getTime())[existingJobs.length - 1]
+    : null;
+
+  const jobFormSchema = createJobFormSchema(lastJob?.estimatedEndTime);
   const defaultTimes = getDefaultTimes();
 
   const form = useForm<JobFormValues>({

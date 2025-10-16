@@ -18,9 +18,11 @@ interface EditJobDialogProps {
   onOpenChange: (open: boolean) => void;
   job: Job;
   scheduleId: string;
+  previousJobEndTime?: string;
+  nextJobStartTime?: string;
 }
 
-const editJobFormSchema = z.object({
+const createEditJobFormSchema = (previousJobEndTime?: string, nextJobStartTime?: string) => z.object({
   fromPostcode: z.string().optional(),
   fromLocation: z.string().min(1, "Pickup location is required"),
   fromLat: z.number(),
@@ -39,16 +41,40 @@ const editJobFormSchema = z.object({
 }, {
   message: "End time must be after start time",
   path: ["estimatedEndTime"],
+}).refine((data) => {
+  // Validate that job starts after previous job ends
+  if (previousJobEndTime) {
+    const prevEnd = new Date(previousJobEndTime);
+    const newStart = new Date(data.estimatedStartTime);
+    return newStart >= prevEnd;
+  }
+  return true;
+}, {
+  message: "Job must start after the previous job ends",
+  path: ["estimatedStartTime"],
+}).refine((data) => {
+  // Validate that job ends before next job starts
+  if (nextJobStartTime) {
+    const nextStart = new Date(nextJobStartTime);
+    const newEnd = new Date(data.estimatedEndTime);
+    return newEnd <= nextStart;
+  }
+  return true;
+}, {
+  message: "Job must end before the next job starts",
+  path: ["estimatedEndTime"],
 });
 
-type EditJobFormValues = z.infer<typeof editJobFormSchema>;
+type EditJobFormValues = z.infer<ReturnType<typeof createEditJobFormSchema>>;
 
-export default function EditJobDialog({ open, onOpenChange, job, scheduleId }: EditJobDialogProps) {
+export default function EditJobDialog({ open, onOpenChange, job, scheduleId, previousJobEndTime, nextJobStartTime }: EditJobDialogProps) {
   const { toast } = useToast();
   const [gettingFromLocation, setGettingFromLocation] = useState(false);
   const [gettingToLocation, setGettingToLocation] = useState(false);
   const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
   const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
+
+  const editJobFormSchema = createEditJobFormSchema(previousJobEndTime, nextJobStartTime);
 
   // Helper to safely format date for datetime-local input
   const formatDateForInput = (date: Date | string): string => {

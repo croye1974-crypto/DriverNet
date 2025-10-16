@@ -373,15 +373,26 @@ export default function Schedule() {
             onOpenChange={setAddJobOpen}
             scheduleId={currentSchedule.id}
             jobCount={jobs.length}
+            existingJobs={jobs}
           />
-          {selectedJob && (
-            <EditJobDialog
-              open={editJobOpen}
-              onOpenChange={setEditJobOpen}
-              job={selectedJob}
-              scheduleId={currentSchedule.id}
-            />
-          )}
+          {selectedJob && (() => {
+            // Find the index of the selected job in the sorted jobs array
+            const sortedJobsList = [...jobs].sort((a, b) => new Date(a.estimatedStartTime).getTime() - new Date(b.estimatedStartTime).getTime());
+            const jobIndex = sortedJobsList.findIndex(j => j.id === selectedJob.id);
+            const previousJob = jobIndex > 0 ? sortedJobsList[jobIndex - 1] : null;
+            const nextJob = jobIndex < sortedJobsList.length - 1 ? sortedJobsList[jobIndex + 1] : null;
+
+            return (
+              <EditJobDialog
+                open={editJobOpen}
+                onOpenChange={setEditJobOpen}
+                job={selectedJob}
+                scheduleId={currentSchedule.id}
+                previousJobEndTime={previousJob?.estimatedEndTime ? new Date(previousJob.estimatedEndTime).toISOString() : undefined}
+                nextJobStartTime={nextJob?.estimatedStartTime ? new Date(nextJob.estimatedStartTime).toISOString() : undefined}
+              />
+            );
+          })()}
         </>
       )}
     </div>
