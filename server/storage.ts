@@ -562,26 +562,30 @@ export class MemStorage implements IStorage {
       ? `${Math.round(distance * 1000)}m` 
       : `${distance.toFixed(1)}km`;
 
-    // Message to user1 about user2
-    const messageContent1 = `🚗 Schedule Match! Your route matches ${user2.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
+    // Create a system message in their conversation thread
+    // This appears in user1's conversation with user2 and vice versa
+    const messageContent = `Schedule Match! Your route matches ${user2.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
     
+    // Message in user1's view (appears to come from user2 to encourage conversation)
     const message1: Message = {
       id: randomUUID(),
-      senderId: 'system',
+      senderId: user2Id,
       receiverId: user1Id,
-      content: messageContent1,
+      content: messageContent,
       createdAt: new Date(),
+      read: false,
     };
     
-    // Message to user2 about user1
-    const messageContent2 = `🚗 Schedule Match! Your route matches ${user1.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
+    // Message in user2's view (appears to come from user1 to encourage conversation)  
+    const messageContent2 = `Schedule Match! Your route matches ${user1.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
     
     const message2: Message = {
       id: randomUUID(),
-      senderId: 'system',
+      senderId: user1Id,
       receiverId: user2Id,
       content: messageContent2,
       createdAt: new Date(),
+      read: false,
     };
 
     this.messages.set(message1.id, message1);

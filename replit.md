@@ -95,3 +95,15 @@ The application is structured with a clear separation between frontend, backend,
   - Dialog content: z-index 9999 (inline style)
   - Map container: z-index 1
   - May need additional mobile-specific fixes
+
+### Automatic Schedule Match Notifications
+- ✅ **Complete schedule matching system implemented and tested**
+  - Detects when drivers will be at same destination (within 3km) at similar time (within 60 minutes)
+  - Automatically creates messages in the conversation thread between matched drivers
+  - Real-time WebSocket notifications alert both drivers instantly
+  - Message format: "Schedule Match! Your route matches [Driver Name]'s schedule. You'll both be near [Location] around [Time] (within Xkm). Contact them to discuss pickup arrangements."
+  - Matching triggered automatically on job creation via POST /api/jobs
+  - Storage methods: findMatchingSchedules() and createScheduleMatchMessage()
+  - Filters out same-user jobs and sorts matches by proximity
+  - Messages appear in regular conversation threads (not separate system conversations)
+  - **Tested on mobile (375x667)** - all functionality verified including API and UI
