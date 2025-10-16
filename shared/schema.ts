@@ -77,7 +77,62 @@ export const messages = pgTable("messages", {
   senderId: varchar("sender_id").notNull().references(() => users.id),
   receiverId: varchar("receiver_id").notNull().references(() => users.id),
   content: text("content").notNull(),
+  read: boolean("read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Ratings for shared lifts
+export const ratings = pgTable("ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  raterId: varchar("rater_id").notNull().references(() => users.id),
+  ratedUserId: varchar("rated_user_id").notNull().references(() => users.id),
+  liftType: text("lift_type").notNull(), // 'offer' or 'request'
+  liftId: varchar("lift_id").notNull(), // ID of the lift offer or request
+  stars: integer("stars").notNull(), // 1-5
+  punctuality: integer("punctuality"), // 1-5
+  professionalism: integer("professionalism"), // 1-5
+  communication: integer("communication"), // 1-5
+  vehicleCondition: integer("vehicle_condition"), // 1-5 (for offers only)
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User statistics and reputation
+export const userStats = pgTable("user_stats", {
+  userId: varchar("user_id").primaryKey().references(() => users.id),
+  reputationScore: integer("reputation_score").default(0), // 0-100
+  tier: text("tier").default("bronze"), // bronze, silver, gold, platinum
+  totalLiftsShared: integer("total_lifts_shared").default(0),
+  totalLiftsOffered: integer("total_lifts_offered").default(0),
+  totalLiftsRequested: integer("total_lifts_requested").default(0),
+  averageRating: real("average_rating").default(0),
+  punctualityScore: real("punctuality_score").default(0), // 0-100
+  completionRatio: real("completion_ratio").default(0), // 0-100
+  totalPoints: integer("total_points").default(0),
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastActivityDate: timestamp("last_activity_date"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Badge catalog
+export const badges = pgTable("badges", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // milestone, quality, community, safety
+  icon: text("icon").notNull(), // emoji or icon name
+  requirement: text("requirement").notNull(), // description of how to earn
+  threshold: integer("threshold"), // numeric threshold if applicable
+});
+
+// User badges earned
+export const userBadges = pgTable("user_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  badgeId: varchar("badge_id").notNull().references(() => badges.id),
+  earnedAt: timestamp("earned_at").defaultNow(),
+  progress: integer("progress").default(0), // for tracking progress toward badge
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -126,6 +181,28 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   createdAt: true,
 });
 
+export const insertRatingSchema = createInsertSchema(ratings).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  stars: z.number().min(1).max(5),
+  punctuality: z.number().min(1).max(5).optional(),
+  professionalism: z.number().min(1).max(5).optional(),
+  communication: z.number().min(1).max(5).optional(),
+  vehicleCondition: z.number().min(1).max(5).optional(),
+});
+
+export const insertUserStatsSchema = createInsertSchema(userStats).omit({
+  updatedAt: true,
+});
+
+export const insertBadgeSchema = createInsertSchema(badges);
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
+  id: true,
+  earnedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -143,3 +220,15 @@ export type LiftRequest = typeof liftRequests.$inferSelect;
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+export type InsertRating = z.infer<typeof insertRatingSchema>;
+export type Rating = typeof ratings.$inferSelect;
+
+export type InsertUserStats = z.infer<typeof insertUserStatsSchema>;
+export type UserStats = typeof userStats.$inferSelect;
+
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+export type Badge = typeof badges.$inferSelect;
+
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+export type UserBadge = typeof userBadges.$inferSelect;

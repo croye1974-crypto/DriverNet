@@ -113,3 +113,16 @@ The application is structured with a clear separation between frontend, backend,
   - Filters out same-user jobs and sorts matches by proximity
   - Messages appear in regular conversation threads (not separate system conversations)
   - **Tested on mobile (375x667)** - all functionality verified including API and UI
+
+### Gamification & Scoring System (Uber-like)
+- ✅ **Complete driver reputation and achievement system implemented**
+  - **Driver Ratings**: 1-5 star bilateral ratings with KPI tags (punctuality, professionalism, communication, vehicle condition)
+  - **Reputation Score** (0-100): Weighted calculation - 60% rolling 90-day rating, 25% punctuality, 15% completion ratio
+  - **Tier System**: Bronze (0-69), Silver (70-84), Gold (85-94), Platinum (95-100)
+  - **Achievement Badges**: Milestone, Quality, Community, and Safety badges with auto-award logic
+  - **Gamification Features**: Points system, streak tracking, progress indicators
+  - **Profile Enhancement**: Displays reputation score, tier badge, achievements, performance metrics, lifetime stats
+  - **API Endpoints**: POST /api/ratings, GET /api/users/:id/stats, GET /api/users/:id/badges, GET /api/badges
+  - **Storage Methods**: createRating(), calculateReputationScore(), checkAndAwardBadges(), awardBadge()
+  - **Badge Catalog**: 10 pre-defined badges (First Lift, 10 Lifts, 50 Lifts, 100 Lifts, 5-Star Pro, Perfect Week, Helpful Driver, Quick Responder, On-Time Champion, Route Master)
+  - **Stats Tracked**: Total lifts shared, punctuality score, completion ratio, current streak, longest streak, total points

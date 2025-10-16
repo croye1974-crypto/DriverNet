@@ -7,7 +7,8 @@ import {
   insertJobSchema, 
   insertLiftOfferSchema, 
   insertLiftRequestSchema,
-  insertMessageSchema 
+  insertMessageSchema,
+  insertRatingSchema 
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -553,6 +554,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get conversations error:", error);
       res.status(500).json({ error: "Failed to get conversations" });
+    }
+  });
+
+  // Gamification endpoints
+  app.post("/api/ratings", async (req, res) => {
+    try {
+      const validatedData = insertRatingSchema.parse(req.body);
+      const rating = await storage.createRating(validatedData);
+      res.json(rating);
+    } catch (error) {
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid rating data", details: error });
+      }
+      console.error("Create rating error:", error);
+      res.status(500).json({ error: "Failed to create rating" });
+    }
+  });
+
+  app.get("/api/users/:userId/stats", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      let stats = await storage.getUserStats(userId);
+      
+      if (!stats) {
+        stats = await storage.createUserStats(userId);
+      }
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Get user stats error:", error);
+      res.status(500).json({ error: "Failed to get user stats" });
+    }
+  });
+
+  app.get("/api/users/:userId/badges", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const badges = await storage.getUserBadges(userId);
+      res.json(badges);
+    } catch (error) {
+      console.error("Get user badges error:", error);
+      res.status(500).json({ error: "Failed to get user badges" });
+    }
+  });
+
+  app.get("/api/badges", async (req, res) => {
+    try {
+      const badges = await storage.getAllBadges();
+      res.json(badges);
+    } catch (error) {
+      console.error("Get badges error:", error);
+      res.status(500).json({ error: "Failed to get badges" });
     }
   });
 

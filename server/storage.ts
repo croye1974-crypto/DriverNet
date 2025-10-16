@@ -5,6 +5,10 @@ import {
   type LiftOffer, type InsertLiftOffer,
   type LiftRequest, type InsertLiftRequest,
   type Message, type InsertMessage,
+  type Rating, type InsertRating,
+  type UserStats, type InsertUserStats,
+  type Badge, type InsertBadge,
+  type UserBadge, type InsertUserBadge,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -74,6 +78,28 @@ export interface IStorage {
     unreadCount: number;
   }[]>;
   createScheduleMatchMessage(user1Id: string, user2Id: string, location: string, time: string, distance: number): Promise<Message[]>;
+  
+  // Ratings
+  createRating(rating: InsertRating): Promise<Rating>;
+  getRatingsByUserId(userId: string): Promise<Rating[]>;
+  getRatingForLift(raterId: string, liftId: string): Promise<Rating | undefined>;
+  
+  // User Stats
+  getUserStats(userId: string): Promise<UserStats | undefined>;
+  createUserStats(userId: string): Promise<UserStats>;
+  updateUserStats(userId: string, updates: Partial<InsertUserStats>): Promise<UserStats | undefined>;
+  calculateReputationScore(userId: string): Promise<number>;
+  updateReputationScore(userId: string): Promise<void>;
+  
+  // Badges
+  getBadge(id: string): Promise<Badge | undefined>;
+  getAllBadges(): Promise<Badge[]>;
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  
+  // User Badges
+  getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]>;
+  awardBadge(userId: string, badgeId: string): Promise<UserBadge | null>;
+  checkAndAwardBadges(userId: string): Promise<UserBadge[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -83,6 +109,10 @@ export class MemStorage implements IStorage {
   private liftOffers: Map<string, LiftOffer>;
   private liftRequests: Map<string, LiftRequest>;
   private messages: Map<string, Message>;
+  private ratings: Map<string, Rating>;
+  private userStats: Map<string, UserStats>;
+  private badges: Map<string, Badge>;
+  private userBadges: Map<string, UserBadge>;
 
   constructor() {
     this.users = new Map();
@@ -91,6 +121,10 @@ export class MemStorage implements IStorage {
     this.liftOffers = new Map();
     this.liftRequests = new Map();
     this.messages = new Map();
+    this.ratings = new Map();
+    this.userStats = new Map();
+    this.badges = new Map();
+    this.userBadges = new Map();
     
     this.seedInitialData();
   }
@@ -146,6 +180,54 @@ export class MemStorage implements IStorage {
 
     demoLiftRequests.forEach(request => {
       this.liftRequests.set(request.id, request);
+    });
+
+    // Seed badges
+    const demoBadges: Badge[] = [
+      // Milestone badges
+      { id: 'first-lift', name: 'First Lift', description: 'Complete your first shared lift', category: 'milestone', icon: '🚗', requirement: 'Share 1 lift', threshold: 1 },
+      { id: '10-lifts', name: '10 Lifts', description: 'Share 10 lifts with other drivers', category: 'milestone', icon: '🔟', requirement: 'Share 10 lifts', threshold: 10 },
+      { id: '50-lifts', name: '50 Lifts', description: 'Share 50 lifts with other drivers', category: 'milestone', icon: '⭐', requirement: 'Share 50 lifts', threshold: 50 },
+      { id: '100-lifts', name: 'Century Club', description: 'Share 100 lifts with other drivers', category: 'milestone', icon: '💯', requirement: 'Share 100 lifts', threshold: 100 },
+      
+      // Quality badges
+      { id: '5-star-pro', name: '5-Star Pro', description: 'Maintain 4.8+ rating over 20 trips', category: 'quality', icon: '⭐', requirement: 'Average 4.8+ stars over 20 lifts', threshold: null },
+      { id: 'perfect-week', name: 'Perfect Week', description: 'Receive only 5-star ratings for a week', category: 'quality', icon: '🌟', requirement: '7 days of 5-star ratings', threshold: null },
+      
+      // Community badges
+      { id: 'helpful-driver', name: 'Helpful Driver', description: 'Receive 10 thank you messages', category: 'community', icon: '🤝', requirement: '10 thank you messages', threshold: 10 },
+      { id: 'quick-responder', name: 'Quick Responder', description: 'Reply to messages within 5 minutes', category: 'community', icon: '⚡', requirement: '20 quick responses', threshold: 20 },
+      
+      // Safety badges
+      { id: 'on-time-champion', name: 'On-Time Champion', description: 'Maintain 95%+ punctuality for 30 days', category: 'safety', icon: '⏰', requirement: '95%+ punctuality for 30 days', threshold: null },
+      { id: 'route-master', name: 'Route Master', description: 'Complete 50 routes without delays', category: 'safety', icon: '🗺️', requirement: '50 on-time deliveries', threshold: 50 },
+    ];
+
+    demoBadges.forEach(badge => {
+      this.badges.set(badge.id, badge);
+    });
+
+    // Seed initial user stats for demo users
+    demoUsers.forEach(user => {
+      const rating = user.rating ?? 0;
+      const totalTrips = user.totalTrips ?? 0;
+      const stats: UserStats = {
+        userId: user.id,
+        reputationScore: Math.round((rating / 5) * 60 + 20), // Simplified initial score
+        tier: rating >= 4.8 ? 'gold' : rating >= 4.5 ? 'silver' : 'bronze',
+        totalLiftsShared: totalTrips,
+        totalLiftsOffered: Math.floor(totalTrips * 0.6),
+        totalLiftsRequested: Math.floor(totalTrips * 0.4),
+        averageRating: rating,
+        punctualityScore: 85 + Math.random() * 10,
+        completionRatio: 90 + Math.random() * 8,
+        totalPoints: totalTrips * 100,
+        currentStreak: Math.floor(Math.random() * 7),
+        longestStreak: Math.floor(Math.random() * 30),
+        lastActivityDate: new Date(),
+        updatedAt: new Date(),
+      };
+      this.userStats.set(user.id, stats);
     });
   }
 
@@ -592,6 +674,212 @@ export class MemStorage implements IStorage {
     this.messages.set(message2.id, message2);
 
     return [message1, message2];
+  }
+
+  // Ratings
+  async createRating(insertRating: InsertRating): Promise<Rating> {
+    const id = randomUUID();
+    const rating: Rating = {
+      id,
+      raterId: insertRating.raterId,
+      ratedUserId: insertRating.ratedUserId,
+      liftType: insertRating.liftType,
+      liftId: insertRating.liftId,
+      stars: insertRating.stars,
+      punctuality: insertRating.punctuality ?? null,
+      professionalism: insertRating.professionalism ?? null,
+      communication: insertRating.communication ?? null,
+      vehicleCondition: insertRating.vehicleCondition ?? null,
+      comment: insertRating.comment ?? null,
+      createdAt: new Date(),
+    };
+    this.ratings.set(id, rating);
+    
+    // Update user stats after rating
+    await this.updateReputationScore(insertRating.ratedUserId);
+    await this.checkAndAwardBadges(insertRating.ratedUserId);
+    
+    return rating;
+  }
+
+  async getRatingsByUserId(userId: string): Promise<Rating[]> {
+    return Array.from(this.ratings.values())
+      .filter((rating) => rating.ratedUserId === userId)
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+  }
+
+  async getRatingForLift(raterId: string, liftId: string): Promise<Rating | undefined> {
+    return Array.from(this.ratings.values()).find(
+      (rating) => rating.raterId === raterId && rating.liftId === liftId
+    );
+  }
+
+  // User Stats
+  async getUserStats(userId: string): Promise<UserStats | undefined> {
+    return this.userStats.get(userId);
+  }
+
+  async createUserStats(userId: string): Promise<UserStats> {
+    const stats: UserStats = {
+      userId,
+      reputationScore: 0,
+      tier: 'bronze',
+      totalLiftsShared: 0,
+      totalLiftsOffered: 0,
+      totalLiftsRequested: 0,
+      averageRating: 0,
+      punctualityScore: 0,
+      completionRatio: 0,
+      totalPoints: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      lastActivityDate: null,
+      updatedAt: new Date(),
+    };
+    this.userStats.set(userId, stats);
+    return stats;
+  }
+
+  async updateUserStats(userId: string, updates: Partial<InsertUserStats>): Promise<UserStats | undefined> {
+    const stats = this.userStats.get(userId);
+    if (!stats) return undefined;
+    
+    const updatedStats: UserStats = {
+      ...stats,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.userStats.set(userId, updatedStats);
+    return updatedStats;
+  }
+
+  async calculateReputationScore(userId: string): Promise<number> {
+    const ratings = await this.getRatingsByUserId(userId);
+    const stats = await this.getUserStats(userId);
+    
+    if (!stats) return 0;
+    
+    // Calculate 90-day rolling average rating (60% weight)
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const recentRatings = ratings.filter(r => r.createdAt && r.createdAt >= ninetyDaysAgo);
+    const avgRating = recentRatings.length > 0
+      ? recentRatings.reduce((sum, r) => sum + r.stars, 0) / recentRatings.length
+      : 0;
+    const ratingScore = (avgRating / 5) * 60;
+    
+    // Punctuality score (25% weight)
+    const punctualityScore = ((stats.punctualityScore ?? 0) / 100) * 25;
+    
+    // Completion ratio (15% weight)
+    const completionScore = ((stats.completionRatio ?? 0) / 100) * 15;
+    
+    return Math.round(ratingScore + punctualityScore + completionScore);
+  }
+
+  async updateReputationScore(userId: string): Promise<void> {
+    let stats = await this.getUserStats(userId);
+    if (!stats) {
+      stats = await this.createUserStats(userId);
+    }
+    
+    const reputationScore = await this.calculateReputationScore(userId);
+    
+    // Determine tier based on score
+    let tier: string;
+    if (reputationScore >= 95) tier = 'platinum';
+    else if (reputationScore >= 85) tier = 'gold';
+    else if (reputationScore >= 70) tier = 'silver';
+    else tier = 'bronze';
+    
+    // Calculate average rating
+    const ratings = await this.getRatingsByUserId(userId);
+    const averageRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length
+      : 0;
+    
+    await this.updateUserStats(userId, {
+      reputationScore,
+      tier,
+      averageRating,
+    });
+  }
+
+  // Badges
+  async getBadge(id: string): Promise<Badge | undefined> {
+    return this.badges.get(id);
+  }
+
+  async getAllBadges(): Promise<Badge[]> {
+    return Array.from(this.badges.values());
+  }
+
+  async createBadge(badge: InsertBadge): Promise<Badge> {
+    this.badges.set(badge.id, badge);
+    return badge;
+  }
+
+  // User Badges
+  async getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]> {
+    const userBadges = Array.from(this.userBadges.values())
+      .filter((ub) => ub.userId === userId);
+    
+    return userBadges.map((ub) => ({
+      ...ub,
+      badge: this.badges.get(ub.badgeId)!,
+    })).filter((ub) => ub.badge); // Filter out badges that don't exist
+  }
+
+  async awardBadge(userId: string, badgeId: string): Promise<UserBadge | null> {
+    // Check if user already has this badge
+    const existing = Array.from(this.userBadges.values()).find(
+      (ub) => ub.userId === userId && ub.badgeId === badgeId
+    );
+    if (existing) return null;
+    
+    const id = randomUUID();
+    const userBadge: UserBadge = {
+      id,
+      userId,
+      badgeId,
+      progress: 100,
+      earnedAt: new Date(),
+    };
+    this.userBadges.set(id, userBadge);
+    return userBadge;
+  }
+
+  async checkAndAwardBadges(userId: string): Promise<UserBadge[]> {
+    const stats = await this.getUserStats(userId);
+    if (!stats) return [];
+    
+    const awarded: UserBadge[] = [];
+    
+    // Check milestone badges
+    const milestones = [
+      { id: 'first-lift', threshold: 1 },
+      { id: '10-lifts', threshold: 10 },
+      { id: '50-lifts', threshold: 50 },
+      { id: '100-lifts', threshold: 100 },
+    ];
+    
+    for (const milestone of milestones) {
+      if ((stats.totalLiftsShared ?? 0) >= milestone.threshold) {
+        const badge = await this.awardBadge(userId, milestone.id);
+        if (badge) awarded.push(badge);
+      }
+    }
+    
+    // Check quality badges
+    const ratings = await this.getRatingsByUserId(userId);
+    if (ratings.length >= 20) {
+      const avg = ratings.slice(0, 20).reduce((sum, r) => sum + r.stars, 0) / 20;
+      if (avg >= 4.8) {
+        const badge = await this.awardBadge(userId, '5-star-pro');
+        if (badge) awarded.push(badge);
+      }
+    }
+    
+    return awarded;
   }
 }
 
