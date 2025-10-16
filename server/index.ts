@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerStripeRoutes } from "./routes/stripe";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -93,6 +94,9 @@ app.use((req, res, next) => {
 (async () => {
   // Register auth routes first
   registerAuthRoutes(app);
+  
+  // Register Stripe routes
+  registerStripeRoutes(app);
   
   const server = await registerRoutes(app);
 
