@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, MapPin, Send } from "lucide-react";
+import { MessageSquare, MapPin, Send, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 
 interface MessageDialogProps {
   open: boolean;
@@ -19,6 +21,7 @@ interface MessageDialogProps {
   fromLocation: string;
   toLocation?: string;
   type: "offer" | "request";
+  requestId?: string; // ID of the lift request (only for type="request")
 }
 
 export default function MessageDialog({
@@ -28,10 +31,34 @@ export default function MessageDialog({
   fromLocation,
   toLocation,
   type,
+  requestId,
 }: MessageDialogProps) {
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Mutation to accept and remove lift request
+  const acceptRequest = useMutation({
+    mutationFn: async () => {
+      if (!requestId) throw new Error("No request ID");
+      await apiRequest("DELETE", `/api/lift-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Request Accepted!",
+        description: `You've accepted ${driverName}'s lift request. The request has been removed from the system.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/lift-requests"] });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Accept Request",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Clear message when dialog closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -63,6 +90,10 @@ export default function MessageDialog({
       setSending(false);
       onOpenChange(false);
     }, 500);
+  };
+
+  const handleAcceptRequest = () => {
+    acceptRequest.mutate();
   };
 
   return (
@@ -123,6 +154,18 @@ export default function MessageDialog({
           >
             Cancel
           </Button>
+          {type === "request" && requestId && (
+            <Button
+              onClick={handleAcceptRequest}
+              disabled={acceptRequest.isPending}
+              variant="default"
+              className="bg-green-600 hover:bg-green-700"
+              data-testid="button-accept-request"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              {acceptRequest.isPending ? "Accepting..." : "Accept Request"}
+            </Button>
+          )}
           <Button
             onClick={handleSend}
             disabled={sending || !message.trim()}

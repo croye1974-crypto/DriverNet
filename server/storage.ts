@@ -99,14 +99,51 @@ export class MemStorage implements IStorage {
     }
 
     const demoUsers: User[] = [
-      { id: 'user-1', username: 'john_driver', name: 'John Smith', avatar: null, rating: 4.8, totalTrips: 156, verified: true },
-      { id: 'user-2', username: 'sarah_delivers', name: 'Sarah Johnson', avatar: null, rating: 4.9, totalTrips: 203, verified: true },
-      { id: 'user-3', username: 'mike_transport', name: 'Mike Williams', avatar: null, rating: 4.7, totalTrips: 98, verified: true },
-      { id: 'user-4', username: 'emma_driver', name: 'Emma Brown', avatar: null, rating: 4.6, totalTrips: 134, verified: true },
+      { id: 'user-1', username: 'john_driver', password: 'demo', name: 'John Smith', avatar: null, rating: 4.8, totalTrips: 156, verified: true },
+      { id: 'user-2', username: 'sarah_delivers', password: 'demo', name: 'Sarah Johnson', avatar: null, rating: 4.9, totalTrips: 203, verified: true },
+      { id: 'user-3', username: 'mike_transport', password: 'demo', name: 'Mike Williams', avatar: null, rating: 4.7, totalTrips: 98, verified: true },
+      { id: 'user-4', username: 'emma_driver', password: 'demo', name: 'Emma Brown', avatar: null, rating: 4.6, totalTrips: 134, verified: true },
     ];
 
     demoUsers.forEach(user => {
       this.users.set(user.id, user);
+    });
+
+    const now = new Date();
+    const today4pm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 0);
+    const today630pm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 30);
+
+    const demoLiftRequests: LiftRequest[] = [
+      {
+        id: '1',
+        requesterId: 'user-2',
+        fromLat: 53.7960,
+        fromLng: -1.5491,
+        toLat: 53.3808,
+        toLng: -1.4703,
+        fromLocation: 'Leeds Station',
+        toLocation: 'Sheffield Dealership',
+        requestedTime: today4pm,
+        notes: null,
+        createdAt: new Date(Date.now() - 5 * 60 * 1000),
+      },
+      {
+        id: '2',
+        requesterId: 'user-3',
+        fromLat: 52.9548,
+        fromLng: -1.1581,
+        toLat: 52.9225,
+        toLng: -1.4746,
+        fromLocation: 'Nottingham Centre',
+        toLocation: 'Derby Train Station',
+        requestedTime: today630pm,
+        notes: null,
+        createdAt: new Date(Date.now() - 12 * 60 * 1000),
+      },
+    ];
+
+    demoLiftRequests.forEach(request => {
+      this.liftRequests.set(request.id, request);
     });
   }
 

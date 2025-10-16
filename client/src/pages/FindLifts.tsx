@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import type { LiftRequest } from "@shared/schema";
 
 // TODO: Remove mock data and fetch from API
 const mockDrivers = [
@@ -68,29 +70,6 @@ const mockDrivers = [
   },
 ];
 
-const mockRequests = [
-  {
-    id: "1",
-    requesterName: "Sarah Williams",
-    fromLocation: "Leeds Station",
-    fromLat: 53.7960,
-    fromLng: -1.5491,
-    toLocation: "Sheffield Dealership",
-    requestedTime: "16:00",
-    postedTime: "5 min ago",
-  },
-  {
-    id: "2",
-    requesterName: "Tom Harris",
-    fromLocation: "Nottingham Centre",
-    fromLat: 52.9548,
-    fromLng: -1.1581,
-    toLocation: "Derby Train Station",
-    requestedTime: "18:30",
-    postedTime: "12 min ago",
-  },
-];
-
 export default function FindLifts() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -103,12 +82,18 @@ export default function FindLifts() {
     fromLocation: string;
     toLocation?: string;
     type: "offer" | "request";
+    requestId?: string;
   }>({
     open: false,
     driverName: "",
     fromLocation: "",
     toLocation: "",
     type: "offer",
+    requestId: undefined,
+  });
+
+  const { data: liftRequests = [], isLoading: requestsLoading } = useQuery<LiftRequest[]>({
+    queryKey: ["/api/lift-requests"],
   });
 
   const mapOffers = mockDrivers.map((driver) => ({
@@ -122,9 +107,9 @@ export default function FindLifts() {
     toLocation: driver.toLocation,
   }));
 
-  const mapRequests = mockRequests.map((request) => ({
+  const mapRequests = liftRequests.map((request) => ({
     id: request.id,
-    name: request.requesterName,
+    name: `Request ${request.id}`, // TODO: Fetch actual user name
     fromLat: request.fromLat,
     fromLng: request.fromLng,
     fromLocation: request.fromLocation,
@@ -168,14 +153,15 @@ export default function FindLifts() {
   };
 
   const handleRequestClick = (requestId: string) => {
-    const request = mockRequests.find(r => r.id === requestId);
+    const request = liftRequests.find(r => r.id === requestId);
     if (request) {
       setMessageDialog({
         open: true,
-        driverName: request.requesterName,
+        driverName: `Request ${request.id}`, // TODO: Fetch actual user name
         fromLocation: request.fromLocation,
         toLocation: request.toLocation,
         type: "request",
+        requestId: request.id,
       });
     }
   };
@@ -243,14 +229,39 @@ export default function FindLifts() {
           </TabsContent>
 
           <TabsContent value="requests" className="flex-1 overflow-auto p-4 space-y-2 mt-0">
-            {mockRequests.map((request) => (
-              <LiftRequestCard
-                key={request.id}
-                {...request}
-                onOffer={(id) => console.log(`Offer lift to requester ${id}`)}
-                onMessage={(id) => console.log(`Message requester ${id}`)}
-              />
-            ))}
+            {requestsLoading ? (
+              <div className="text-center text-muted-foreground py-8">Loading requests...</div>
+            ) : liftRequests.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">No lift requests available</div>
+            ) : (
+              liftRequests.map((request) => {
+                const requestedDate = new Date(request.requestedTime);
+                const createdDate = new Date(request.createdAt);
+                
+                const requestedTime = !isNaN(requestedDate.getTime())
+                  ? requestedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                  : 'Unknown';
+                const postedTime = !isNaN(createdDate.getTime())
+                  ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60)) + ' min ago'
+                  : 'Recently';
+                
+                return (
+                  <LiftRequestCard
+                    key={request.id}
+                    id={request.id}
+                    requesterName={`Request ${request.id}`}
+                    fromLocation={request.fromLocation}
+                    fromLat={request.fromLat}
+                    fromLng={request.fromLng}
+                    toLocation={request.toLocation}
+                    requestedTime={requestedTime}
+                    postedTime={postedTime}
+                    onOffer={(id) => console.log(`Offer lift to requester ${id}`)}
+                    onMessage={(id) => console.log(`Message requester ${id}`)}
+                  />
+                );
+              })
+            )}
           </TabsContent>
         </Tabs>
       )}
@@ -288,6 +299,7 @@ export default function FindLifts() {
         fromLocation={messageDialog.fromLocation}
         toLocation={messageDialog.toLocation}
         type={messageDialog.type}
+        requestId={messageDialog.requestId}
       />
     </div>
   );

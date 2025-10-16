@@ -57,6 +57,23 @@ The application is structured with a clear separation between frontend, backend,
 
 ## Recent Changes (October 16, 2025)
 
+### Lift Request Acceptance System
+- ✅ **Complete lift request acceptance flow implemented**
+  - MessageDialog displays green "Accept Request" button for lift requests
+  - DELETE /api/lift-requests/:id endpoint removes request from system
+  - Success toast: "You've accepted X's lift request. The request has been removed from the system."
+  - Query invalidation triggers automatic update of both map and list views
+  - **Verified on mobile (375x667 viewport)** - both map markers and list cards update without refresh
+  - Demo data seeded: 2 lift requests in development mode for testing
+
+### FindLifts API Integration
+- ✅ **Migrated from mock data to live API**
+  - useQuery fetches from /api/lift-requests
+  - Both map and list views use same query data source
+  - Ensures consistency between map markers and list cards
+  - Loading states and empty states handled
+  - Automatic updates when lift requests are deleted
+
 ### Zoom-Responsive Map Markers
 - ✅ **Dynamic marker scaling for 2000+ users on mobile**
   - Markers scale based on zoom level to prevent overcrowding

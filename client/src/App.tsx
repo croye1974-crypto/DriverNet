@@ -20,6 +20,14 @@ interface LastLocation {
   timestamp: string;
 }
 
+interface Conversation {
+  userId: string;
+  name: string;
+  lastMessage: string;
+  timestamp: string;
+  unreadCount: number;
+}
+
 function AppContent() {
   const [activeTab, setActiveTab] = useState<"find" | "schedule" | "messages" | "profile">("schedule");
   const currentUserId = "user-1"; // Mock - will be replaced with real auth
@@ -29,6 +37,14 @@ function AppContent() {
     queryKey: ["/api/users", currentUserId, "last-location"],
     refetchInterval: 60000, // Refresh every minute
   });
+
+  // Fetch conversations to calculate unread count
+  const { data: conversations = [] } = useQuery<Conversation[]>({
+    queryKey: ["/api/conversations", currentUserId],
+  });
+
+  // Calculate total unread messages
+  const totalUnreadMessages = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
 
   const renderPage = () => {
     switch (activeTab) {
@@ -66,7 +82,7 @@ function AppContent() {
       <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        unreadMessages={3}
+        unreadMessages={totalUnreadMessages}
       />
 
       <DriverNotifications
