@@ -58,6 +58,7 @@ export default function LocationInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          spellCheck="true"
           data-testid="input-location"
         />
       </div>

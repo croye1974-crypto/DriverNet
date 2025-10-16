@@ -42,6 +42,7 @@ export default function PostLiftForm({ onSubmit }: PostLiftFormProps) {
             placeholder="e.g., Birmingham City Centre"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
+            spellCheck="true"
             data-testid="input-from-location"
           />
         </div>
@@ -56,6 +57,7 @@ export default function PostLiftForm({ onSubmit }: PostLiftFormProps) {
             placeholder="e.g., Manchester Airport"
             value={to}
             onChange={(e) => setTo(e.target.value)}
+            spellCheck="true"
             data-testid="input-to-location"
           />
         </div>

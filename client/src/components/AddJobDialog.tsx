@@ -305,6 +305,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                       <Input
                         placeholder="e.g., Manchester Dealership"
                         {...field}
+                        spellCheck="true"
                         data-testid="input-from-location"
                       />
                     </FormControl>
@@ -397,6 +398,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                       <Input
                         placeholder="e.g., Liverpool Station"
                         {...field}
+                        spellCheck="true"
                         data-testid="input-to-location"
                       />
                     </FormControl>

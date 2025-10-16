@@ -40,6 +40,7 @@ export default function RequestLiftForm({ onSubmit }: RequestLiftFormProps) {
             placeholder="e.g., Leeds Station"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
+            spellCheck="true"
             data-testid="input-from-location"
           />
         </div>
@@ -54,6 +55,7 @@ export default function RequestLiftForm({ onSubmit }: RequestLiftFormProps) {
             placeholder="e.g., Sheffield Dealership"
             value={to}
             onChange={(e) => setTo(e.target.value)}
+            spellCheck="true"
             data-testid="input-to-location"
           />
         </div>
