@@ -76,6 +76,8 @@ export default function FindLifts() {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [requestingLift, setRequestingLift] = useState<{id: string; callSign: string; fromLocation: string; toLocation: string} | null>(null);
   const [requestedLifts, setRequestedLifts] = useState<Set<string>>(new Set());
+  const [offeringLift, setOfferingLift] = useState<{id: string; requesterName: string; fromLocation: string; toLocation: string} | null>(null);
+  const [offeredLifts, setOfferedLifts] = useState<Set<string>>(new Set());
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [messageDialog, setMessageDialog] = useState<{
     open: boolean;
@@ -181,6 +183,29 @@ export default function FindLifts() {
         description: `Your request to join ${requestingLift.callSign}'s lift has been sent. They will be notified and can accept or decline.`,
       });
       setRequestingLift(null);
+    }
+  };
+
+  const handleOfferLift = (id: string) => {
+    const request = liftRequests.find(r => r.id === id);
+    if (request) {
+      setOfferingLift({
+        id: request.id,
+        requesterName: `Driver ${request.id.substring(0, 6)}`, // TODO: Fetch actual name
+        fromLocation: request.fromLocation,
+        toLocation: request.toLocation,
+      });
+    }
+  };
+
+  const confirmOffer = () => {
+    if (offeringLift) {
+      setOfferedLifts(prev => new Set(prev).add(offeringLift.id));
+      toast({
+        title: "Lift Offer Sent",
+        description: `Your offer to give ${offeringLift.requesterName} a lift has been sent. They will be notified and can accept your offer.`,
+      });
+      setOfferingLift(null);
     }
   };
 
@@ -302,7 +327,7 @@ export default function FindLifts() {
                     toLocation={request.toLocation}
                     requestedTime={requestedTime}
                     postedTime={postedTime}
-                    onOffer={(id) => console.log(`Offer lift to requester ${id}`)}
+                    onOffer={handleOfferLift}
                     onMessage={(id) => console.log(`Message requester ${id}`)}
                   />
                 );
@@ -333,6 +358,32 @@ export default function FindLifts() {
             <AlertDialogCancel data-testid="button-cancel-request">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRequest} data-testid="button-confirm-request">
               Confirm Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!offeringLift} onOpenChange={(open) => !open && setOfferingLift(null)}>
+        <AlertDialogContent data-testid="dialog-confirm-offer">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Lift Offer</AlertDialogTitle>
+            <AlertDialogDescription>
+              {offeringLift && (
+                <>
+                  You are offering to give <strong>{offeringLift.requesterName}</strong> a lift from{' '}
+                  <strong>{offeringLift.fromLocation}</strong> to{' '}
+                  <strong>{offeringLift.toLocation}</strong>.
+                  <br /><br />
+                  The driver will receive your offer and can choose to accept it. 
+                  You'll be notified if they accept your offer.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-offer">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmOffer} data-testid="button-confirm-offer">
+              Confirm Offer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

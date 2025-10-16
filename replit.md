@@ -50,3 +50,24 @@ The application features clear separation between frontend, backend, and shared 
 - **Authentication**: `bcrypt`, `express-session`
 - **Payment Processing**: Stripe
 - **Testing**: Playwright
+
+## Recent Feature Implementations
+
+### Your Location on Map (Implemented)
+- Feature: Always-visible user location marker on map view
+- Bottom Navigation: Renamed "Find Lifts" to "Map" for clarity
+- Location Marker: Purple marker with pulsing red indicator shows user's GPS position
+- Map Legend: Updated to show "Your Location" (purple), "Lift Offers" (blue), "Lift Requests" (green)
+- GPS Integration: Automatic location detection with fallback to Birmingham, UK
+- Visibility: User location marker always on top (z-index 1000) and slightly larger than other markers
+- Access: Map tab constantly available in bottom navigation for instant location awareness
+- Impact: Drivers can see their exact position at all times relative to nearby drivers and lift requests
+
+### Offer Lift Confirmation (Implemented)
+- Feature: Confirmation dialog when offering a lift to a requesting driver
+- UI Flow: Click "Offer Lift" → Review details → Confirm or Cancel
+- Dialog Content: Shows requester name, route (from/to locations), and clear explanation
+- Toast Feedback: "Lift Offer Sent" notification confirms action
+- State Management: Tracks offered lifts to prevent duplicate offers
+- Consistency: Matches the existing "Request Lift" confirmation pattern
+- Impact: Prevents accidental offers and provides clear communication flow
