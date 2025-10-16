@@ -6,7 +6,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173', // or 5000 if Express serves
+    baseURL: 'http://localhost:5000',
     trace: 'on-first-retry',
   },
 });

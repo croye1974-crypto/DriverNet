@@ -26,6 +26,11 @@ const findMatchesSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ ok: true });
+  });
+
   app.post("/api/schedules", async (req, res) => {
     try {
       const validatedData = insertScheduleSchema.parse(req.body);

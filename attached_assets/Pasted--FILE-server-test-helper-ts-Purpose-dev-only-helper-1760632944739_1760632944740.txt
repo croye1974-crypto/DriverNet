@@ -1,0 +1,266 @@
+# =========================================
+# FILE: server/test-helper.ts
+# Purpose: dev-only helpers so tests can create a session user without Stripe
+# =========================================
+import { Express } from "express";
+
+export function registerTestHelpers(app: Express) {
+  if (process.env.NODE_ENV === "production") return;
+
+  app.post("/api/test/seed-user", (req, res) => {
+    const { id = "test-user", email = "test@drivenet.local", sub = "active", name = "Test User" } = req.body || {};
+    (req.session as any).user = { id, email, name, subscription_status: sub };
+    res.json({ ok: true, id, email, sub });
+  });
+
+  app.post("/api/test/logout", (req, res) => {
+    req.session.destroy(() => res.json({ ok: true }));
+  });
+}
+
+# =========================================
+# EDIT: server/index.ts
+# Add one import near the top with your other imports:
+#   import { registerTestHelpers } from "./test-helper";
+# After session middleware is set up, call:
+#   registerTestHelpers(app);
+# Do not change anything else in your server file.
+# =========================================
+
+
+# =========================================
+# FILE: playwright.config.ts   (project root)
+# Purpose: limit Playwright to tests in /tests and set base URL
+# =========================================
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  timeout: 60_000,
+  fullyParallel: true,
+  reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
+  use: {
+    // Change to http://localhost:5000 if your app serves from Express
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure'
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile', use: { ...devices['iPhone 13'] } }
+  ]
+});
+
+
+# =========================================
+# FILE: tests/smoke.spec.ts
+# Purpose: quick check that app loads and key UI renders
+# =========================================
+import { test, expect } from '@playwright/test';
+
+test('homepage loads and map is visible', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveTitle(/DriveNet/i);
+  const map = page.locator('#map, .leaflet-container');
+  await expect(map).toBeVisible();
+});
+
+test('open Post Lift dialog', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /post lift/i }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+
+# =========================================
+# FILE: tests/api.health.spec.ts
+# Purpose: server health sanity check
+# =========================================
+import { test, expect } from '@playwright/test';
+
+test('GET /api/health responds ok', async ({ request, baseURL }) => {
+  const res = await request.get(new URL('/api/health', baseURL).toString());
+  expect(res.status()).toBe(200);
+  const json = await res.json();
+  expect(json).toMatchObject({ ok: true });
+});
+
+
+# =========================================
+# FILE: tests/multiuser.e2e.spec.ts
+# Purpose: three users in parallel, end to end
+# Notes: update the button and label text if your UI uses different words
+# =========================================
+import { test, expect, chromium } from '@playwright/test';
+
+const BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5000';
+
+async function loginAs(page, id: string, email: string) {
+  const resp = await page.request.post(`${BASE}/api/test/seed-user`, {
+    data: { id, email, sub: 'active' }
+  });
+  expect(resp.ok()).toBeTruthy();
+  await page.goto(BASE);
+}
+
+test('multi user flow with offer, request, match, and chat', async () => {
+  const browser = await chromium.launch();
+  const ctxA = await browser.newContext({ permissions: ['geolocation'] });
+  const ctxB = await browser.newContext({ permissions: ['geolocation'] });
+  const ctxC = await browser.newContext({ permissions: ['geolocation'] });
+
+  const a = await ctxA.newPage();  // Driver A
+  const b = await ctxB.newPage();  // Rider B
+  const c = await ctxC.newPage();  // Rider C noise
+
+  await loginAs(a, 'user-A', 'a@drivenet.local');
+  await loginAs(b, 'user-B', 'b@drivenet.local');
+  await loginAs(c, 'user-C', 'c@drivenet.local');
+
+  await ctxA.setGeolocation({ latitude: 51.5074, longitude: -0.1278 }); // London
+  await ctxB.setGeolocation({ latitude: 51.4545, longitude: -2.5879 }); // Bristol
+  await ctxC.setGeolocation({ latitude: 53.4808, longitude: -2.2426 }); // Manchester
+
+  // A posts a lift offer
+  await a.getByRole('button', { name: /post lift/i }).click();
+  await a.getByLabel(/pickup|from/i).fill('London Bridge');
+  await a.getByLabel(/dropoff|to/i).fill('Heathrow T5');
+  await a.getByLabel(/time|when|date/i).fill('2025-10-21T08:15');
+  await a.getByRole('button', { name: /publish|post/i }).click();
+  await expect(a.getByText(/lift posted|created/i)).toBeVisible();
+
+  // B requests a lift that should match A
+  await b.getByRole('button', { name: /request lift/i }).click();
+  await b.getByLabel(/from|pickup/i).fill('Bristol Temple Meads');
+  await b.getByLabel(/to|dropoff/i).fill('Heathrow T5');
+  await b.getByLabel(/time|when|date/i).fill('2025-10-21T08:45');
+  await b.getByRole('button', { name: /request|submit/i }).click();
+  await expect(b.getByText(/request posted|created/i)).toBeVisible();
+
+  // C creates unrelated request
+  await c.getByRole('button', { name: /request lift/i }).click();
+  await c.getByLabel(/from|pickup/i).fill('Manchester Piccadilly');
+  await c.getByLabel(/to|dropoff/i).fill('Leeds');
+  await c.getByLabel(/time|when|date/i).fill('2025-10-21T08:30');
+  await c.getByRole('button', { name: /request|submit/i }).click();
+  await expect(c.getByText(/request posted|created/i)).toBeVisible();
+
+  // Expect match signal for A and B
+  await expect(a.getByText(/match found|matched/i)).toBeVisible({ timeout: 15000 });
+  await expect(b.getByText(/match found|matched/i)).toBeVisible({ timeout: 15000 });
+
+  // Both accept
+  await a.getByRole('button', { name: /accept/i }).click();
+  await expect(a.getByText(/accepted|confirmed/i)).toBeVisible();
+  await b.getByRole('button', { name: /accept/i }).click();
+  await expect(b.getByText(/accepted|confirmed/i)).toBeVisible();
+
+  // Chat messages
+  await a.getByRole('button', { name: /message|chat/i }).click();
+  await a.getByPlaceholder(/type a message|message/i).fill('On my way');
+  await a.keyboard.press('Enter');
+  await expect(b.getByText('On my way')).toBeVisible();
+
+  await b.getByPlaceholder(/type a message|message/i).fill('Near Gate A');
+  await b.keyboard.press('Enter');
+  await expect(a.getByText('Near Gate A')).toBeVisible();
+
+  // Markers on both maps
+  await expect(a.locator('.leaflet-marker-icon').first()).toBeVisible();
+  await expect(b.locator('.leaflet-marker-icon').first()).toBeVisible();
+
+  await browser.close();
+});
+
+
+# =========================================
+# FILE: artillery.yml   (project root)
+# Purpose: load test with HTTP and WS at scale. Adjust arrivalRate if needed.
+# =========================================
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: warmup
+    - duration: 120
+      arrivalRate: 25
+      rampTo: 80
+      name: ramp
+    - duration: 180
+      arrivalRate: 80
+      name: sustain
+  plugins:
+    ensure:
+      thresholds:
+        - http.response_time.p95: 900
+        - http.response_time.p99: 1600
+        - http.codes.200: 95
+  engines:
+    ws: {}
+scenarios:
+  - name: browse post and ws
+    flow:
+      - post:
+          url: "/api/test/seed-user"
+          json:
+            id: "VU-{{ $randomNumber(1, 999999) }}"
+            email: "vu{{ $randomNumber(1, 999999) }}@drivenet.local"
+            sub: "active"
+      - get:
+          url: "/api/health"
+      - get:
+          url: "/api/jobs/recent-check-ins"
+      - post:
+          url: "/api/jobs"
+          json:
+            fromLat: 51.5074
+            fromLng: -0.1278
+            toLat: 51.4700
+            toLng: -0.4543
+            when: "2025-10-21T08:30"
+      - think: 2
+      - ws:
+          connect: "ws://localhost:5000/ws"
+      - think: 5
+      - ws:
+          send: '{ "type": "location", "lat": 51.50, "lng": -0.14 }'
+      - think: 2
+      - ws:
+          send: '{ "type": "ping" }'
+      - ws:
+          close: {}
+
+
+# =========================================
+# FILE: scripts/pingers.ts   (project root)
+# Purpose: simulate many drivers sending live location over WS
+# =========================================
+import WebSocket from 'ws';
+
+const SERVER = process.env.WS || 'ws://localhost:5000/ws';
+const N = parseInt(process.env.CLIENTS || '100', 10);
+
+function jitter(base: number) {
+  return base + (Math.random() - 0.5) * 0.01;
+}
+
+for (let i = 0; i < N; i++) {
+  const ws = new WebSocket(SERVER);
+  const baseLat = 51.50 + Math.random() * 0.1;
+  const baseLng = -0.14 + Math.random() * 0.1;
+
+  ws.on('open', () => {
+    setInterval(() => {
+      const msg = JSON.stringify({
+        type: 'location',
+        lat: jitter(baseLat),
+        lng: jitter(baseLng),
+      });
+      ws.send(msg);
+    }, 1500 + Math.random() * 1500);
+  });
+
+  ws.on('error', () => {});
+}

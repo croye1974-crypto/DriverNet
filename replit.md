@@ -69,3 +69,38 @@ The application features clear separation between frontend, backend, and shared 
 - **External API**: postcodes.io (for UK postcode lookup)
 - **Authentication**: `bcrypt`, `express-session`
 - **Payment Processing**: Stripe (for subscriptions, checkout sessions, webhooks, customer portal)
+- **Testing**: Playwright (E2E and API testing)
+
+## Recent Bug Fixes & Improvements (October 16, 2025)
+
+### Critical Fixes Implemented
+1. **Express Route Ordering Bug** (Fixed)
+   - Issue: `/api/jobs/recent-check-ins` returning 404 errors
+   - Root Cause: Parameterized route `/api/jobs/:id` was matching before specific routes
+   - Fix: Moved `/api/jobs/recent-check-ins` before `/api/jobs/:id` in routes.ts
+   - Impact: Recent check-ins now load correctly for map view
+
+2. **Add Job Validation Bug** (Fixed)
+   - Issue: Jobs couldn't be created when postcode lookup failed
+   - Root Cause: Strict GPS coordinate validation blocked submission when coordinates were 0,0
+   - Fix: Removed strict validation, added fallback coordinates (Manchester: 53.4808, -2.2426)
+   - Impact: Jobs can now be created with location names only, no postcode/GPS required
+
+3. **Edit Profile Missing Endpoints** (Fixed)
+   - Issue: Edit Profile dialog showed error despite server returning 200
+   - Root Cause: GET `/api/users/:userId` and PATCH `/api/users/:userId` endpoints didn't exist
+   - Fix: Added both endpoints and `updateUser()` method to storage interface
+   - Impact: Edit Profile now works end-to-end with name updates
+
+4. **Date Validation Bug** (Fixed)
+   - Issue: React errors when rendering invalid dates in Schedule component
+   - Root Cause: Invalid Date objects passed to formatting functions
+   - Fix: Added date validation before formatting
+   - Impact: No more React errors with date selection
+
+### Testing Infrastructure
+- **Playwright Configuration**: Added `playwright.config.ts` to run tests only in `/tests` folder
+- **API Health Check**: Added `/api/health` endpoint returning `{ ok: true }`
+- **Smoke Test**: Created `tests/api.health.spec.ts` for quick API verification
+- **Comprehensive E2E Tests**: Playwright-based functional testing covering all major features
+- **Test Coverage**: Successfully tested job creation, check-in/out, map view, messaging, profile editing, and navigation
