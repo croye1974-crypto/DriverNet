@@ -32,7 +32,18 @@ The application prioritizes a native mobile app aesthetic with a light gray back
 - **Authentication**: bcrypt hashing (10 salt rounds), `express-session` for session management (30-day cookie lifetime). Includes registration, login, logout, and current user endpoints.
 - **Subscription & Access Control**: User schema includes `stripeCustomerId`, `subscriptionStatus`, `currentPeriodEnd`, `planId`, and `role` (`user`, `moderator`, `admin`). Middleware for authentication, active subscription, and role-based access.
 - **Abuse Control**: Schemas for `Reports` (userId, reportedUserId, reason, status) and `Blocks` (blockerId, blockedId) for future implementation.
-- **Security**: Rate limiting, CORS, trust proxy for Replit, secure cookies (httpOnly, sameSite: lax, secure in production), and password safety (never returned in API responses).
+- **Security & Production Infrastructure**: 
+  - **Helmet**: Security headers (CSP disabled in dev for Vite HMR)
+  - **Compression**: Gzip compression for responses
+  - **Rate Limiting**: Separate limiters for API (100/15min), auth (5/15min), and webhooks (20/min)
+  - **Session Store**: Postgres for production (connect-pg-simple), Memory for development
+  - **Named Session**: Cookie named "dn.sid" for better tracking
+  - **CORS**: Environment-aware (locked down in production)
+  - **Trust Proxy**: Enabled for Replit/proxy environments
+  - **Secure Cookies**: httpOnly, sameSite: lax, secure in production
+  - **Request Limits**: 1MB JSON/urlencoded, 500KB raw webhook body
+  - **Error Handling**: Structured error middleware with stack traces in dev
+  - **Password Safety**: Never returned in API responses
 - **Gamification**: Driver ratings (1-5 stars with KPIs), a reputation score (0-100), a tier system (Bronze, Silver, Gold, Platinum), and achievement badges (Milestone, Quality, Community, Safety).
 - **Driver Identification**: Call sign system (LL#### format) for simplified driver identification, automatically generated on user creation and displayed across various UI elements.
 - **Spell Checking**: Dynamic spell checking enabled for free-text location/place name inputs, disabled for postcode inputs.
