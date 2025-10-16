@@ -98,6 +98,15 @@ The application features clear separation between frontend, backend, and shared 
    - Fix: Added date validation before formatting
    - Impact: No more React errors with date selection
 
+5. **Edit Job Feature** (Implemented & Tested)
+   - Feature: Complete job editing functionality for pending jobs
+   - Components: EditJobDialog with pre-filled form data, postcode lookup, GPS location
+   - API: Uses existing PATCH `/api/jobs/:id` endpoint with partial update schema
+   - UI: Edit button only visible for pending jobs (not in-progress or completed)
+   - Bug Fix: Added missing `Clock` icon import that was causing React render errors
+   - Testing: Full E2E test passing - edit location, save, verify updates
+   - Impact: Drivers can now modify job details before checking in
+
 ### Testing Infrastructure
 - **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure
 - **Test Helper API**: Dev-only endpoints (`/api/test/seed-user`, `/api/test/logout`) for creating test sessions without Stripe

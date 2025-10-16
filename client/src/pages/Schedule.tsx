@@ -3,17 +3,20 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Clock, CheckCircle, PlayCircle, StopCircle } from "lucide-react";
+import { Plus, MapPin, Clock, CheckCircle, PlayCircle, StopCircle, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AddJobDialog from "@/components/AddJobDialog";
+import EditJobDialog from "@/components/EditJobDialog";
 import type { Job, Schedule as ScheduleType } from "@shared/schema";
 
 export default function Schedule() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [addJobOpen, setAddJobOpen] = useState(false);
+  const [editJobOpen, setEditJobOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   
   // Mock user ID - in real app would come from auth context
   const userId = "user-1";
@@ -311,16 +314,30 @@ export default function Schedule() {
 
                 <div className="flex gap-2 pt-2">
                   {!job.actualStartTime && (
-                    <Button
-                      onClick={() => checkIn.mutate(job.id)}
-                      disabled={checkIn.isPending}
-                      size="sm"
-                      className="flex-1"
-                      data-testid={`button-check-in-${job.id}`}
-                    >
-                      <MapPin className="h-3 w-3 mr-1" />
-                      Check In
-                    </Button>
+                    <>
+                      <Button
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setEditJobOpen(true);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        data-testid={`button-edit-${job.id}`}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        onClick={() => checkIn.mutate(job.id)}
+                        disabled={checkIn.isPending}
+                        size="sm"
+                        className="flex-1"
+                        data-testid={`button-check-in-${job.id}`}
+                      >
+                        <MapPin className="h-3 w-3 mr-1" />
+                        Check In
+                      </Button>
+                    </>
                   )}
                   
                   {job.actualStartTime && !job.actualEndTime && (
@@ -350,12 +367,22 @@ export default function Schedule() {
       </div>
 
       {currentSchedule && (
-        <AddJobDialog
-          open={addJobOpen}
-          onOpenChange={setAddJobOpen}
-          scheduleId={currentSchedule.id}
-          jobCount={jobs.length}
-        />
+        <>
+          <AddJobDialog
+            open={addJobOpen}
+            onOpenChange={setAddJobOpen}
+            scheduleId={currentSchedule.id}
+            jobCount={jobs.length}
+          />
+          {selectedJob && (
+            <EditJobDialog
+              open={editJobOpen}
+              onOpenChange={setEditJobOpen}
+              job={selectedJob}
+              scheduleId={currentSchedule.id}
+            />
+          )}
+        </>
       )}
     </div>
   );
