@@ -182,6 +182,7 @@ export default function MapView({
     <div
       ref={mapContainerRef}
       className="w-full h-full"
+      style={{ zIndex: 1 }}
       data-testid="map-view"
     />
   );
