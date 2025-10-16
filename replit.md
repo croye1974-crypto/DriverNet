@@ -107,6 +107,15 @@ The application features clear separation between frontend, backend, and shared 
    - Testing: Full E2E test passing - edit location, save, verify updates
    - Impact: Drivers can now modify job details before checking in
 
+6. **Automatic Journey Time Calculation** (Re-implemented)
+   - Feature: Auto-calculates journey time and end time based on distance between locations
+   - Implementation: Uses Haversine formula to calculate distance, assumes 80 km/h average speed
+   - Components: Added to both AddJobDialog and EditJobDialog
+   - Display: Shows distance (e.g., "159.4km") and estimated time (e.g., "2h") in a badge
+   - Auto-update: End time automatically updates when locations or start time changes
+   - Testing: E2E test verified London→Birmingham (159km, 2h) with correct auto-calculated end time
+   - Impact: Drivers no longer need to manually calculate journey times
+
 ### Testing Infrastructure
 - **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure
 - **Test Helper API**: Dev-only endpoints (`/api/test/seed-user`, `/api/test/logout`) for creating test sessions without Stripe

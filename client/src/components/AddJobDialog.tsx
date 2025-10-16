@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Loader2, Search } from "lucide-react";
+import { MapPin, Loader2, Search, Navigation } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { estimateJourneyTime, formatDuration, formatDistance, calculateDistance } from "@/lib/journey";
 
 interface AddJobDialogProps {
   open: boolean;
@@ -98,6 +99,27 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
       form.setValue("estimatedEndTime", times.end);
     }
   }, [open, form]);
+
+  // Auto-calculate journey time and end time when locations change
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "fromLat" || name === "fromLng" || name === "toLat" || name === "toLng" || name === "estimatedStartTime") {
+        const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = value;
+        
+        if (fromLat && fromLng && toLat && toLng && fromLat !== 0 && fromLng !== 0 && toLat !== 0 && toLng !== 0) {
+          const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
+          
+          if (estimatedStartTime) {
+            const startDate = new Date(estimatedStartTime);
+            const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
+            const formattedEnd = endDate.toISOString().slice(0, 16);
+            form.setValue("estimatedEndTime", formattedEnd);
+          }
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const createJob = useMutation({
     mutationFn: async (data: JobFormValues) => {
@@ -450,6 +472,33 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
                   </FormItem>
                 )}
               />
+
+              {/* Journey Info Display */}
+              {form.watch("fromLat") && form.watch("toLat") && 
+               form.watch("fromLat") !== 0 && form.watch("toLat") !== 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+                  <Navigation className="h-4 w-4" />
+                  <span>
+                    {formatDistance(
+                      calculateDistance(
+                        form.watch("fromLat")!,
+                        form.watch("fromLng")!,
+                        form.watch("toLat")!,
+                        form.watch("toLng")!
+                      )
+                    )}
+                    {" • "}
+                    Estimated: {formatDuration(
+                      estimateJourneyTime(
+                        form.watch("fromLat")!,
+                        form.watch("fromLng")!,
+                        form.watch("toLat")!,
+                        form.watch("toLng")!
+                      )
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
