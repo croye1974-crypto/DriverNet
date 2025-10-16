@@ -116,6 +116,15 @@ The application features clear separation between frontend, backend, and shared 
    - Testing: E2E test verified London→Birmingham (159km, 2h) with correct auto-calculated end time
    - Impact: Drivers no longer need to manually calculate journey times
 
+7. **Date/Time Validation & Journey Recalculation** (Fixed)
+   - Issue: Users could enter invalid times (end before start), journey time didn't update when editing
+   - Fix: Added Zod schema refinement validation to both Add/Edit dialogs
+   - Validation: Ensures end time is always after start time with error message
+   - Journey Fix: Edit dialog now recalculates journey time immediately when opened
+   - Implementation: `calculateAndSetJourneyTime()` helper with setTimeout trigger
+   - Testing: E2E test verified validation blocks invalid dates and journey auto-updates
+   - Impact: Prevents nonsensical schedules, ensures accurate journey times in Edit dialog
+
 ### Testing Infrastructure
 - **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure
 - **Test Helper API**: Dev-only endpoints (`/api/test/seed-user`, `/api/test/logout`) for creating test sessions without Stripe
