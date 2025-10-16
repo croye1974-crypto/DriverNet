@@ -22,7 +22,7 @@ interface EditJobDialogProps {
   nextJobStartTime?: string;
 }
 
-const createEditJobFormSchema = (previousJobEndTime?: string, nextJobStartTime?: string) => z.object({
+const createEditJobFormSchema = (previousJobEndTime?: string, nextJobStartTime?: string, scheduleDate?: string) => z.object({
   fromPostcode: z.string().optional(),
   fromLocation: z.string().min(1, "Pickup location is required"),
   fromLat: z.number(),
@@ -31,22 +31,30 @@ const createEditJobFormSchema = (previousJobEndTime?: string, nextJobStartTime?:
   toLocation: z.string().min(1, "Delivery location is required"),
   toLat: z.number(),
   toLng: z.number(),
-  estimatedStartTime: z.string().min(1, "Start time is required"),
-  estimatedEndTime: z.string().min(1, "End time is required"),
+  estimatedStartTime: z.string().min(1, "Start time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
+  estimatedEndTime: z.string().min(1, "End time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
 }).refine((data) => {
-  // Validate that end time is after start time
-  const startDate = new Date(data.estimatedStartTime);
-  const endDate = new Date(data.estimatedEndTime);
-  return endDate > startDate;
+  // Validate that end time is different from start time
+  // Note: We allow cross-midnight jobs (end time can be "earlier" if it's next day)
+  const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
+  const [endHour, endMin] = data.estimatedEndTime.split(':').map(Number);
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+  
+  return endMinutes !== startMinutes;
 }, {
-  message: "End time must be after start time",
+  message: "End time cannot be the same as start time",
   path: ["estimatedEndTime"],
 }).refine((data) => {
   // Validate that job starts after previous job ends
-  if (previousJobEndTime) {
-    const prevEnd = new Date(previousJobEndTime);
-    const newStart = new Date(data.estimatedStartTime);
-    return newStart >= prevEnd;
+  if (previousJobEndTime && scheduleDate) {
+    const prevJobDate = new Date(previousJobEndTime);
+    const [newHour, newMin] = data.estimatedStartTime.split(':').map(Number);
+    
+    const newJobStart = new Date(scheduleDate);
+    newJobStart.setHours(newHour, newMin, 0, 0);
+    
+    return newJobStart >= prevJobDate;
   }
   return true;
 }, {
@@ -54,10 +62,20 @@ const createEditJobFormSchema = (previousJobEndTime?: string, nextJobStartTime?:
   path: ["estimatedStartTime"],
 }).refine((data) => {
   // Validate that job ends before next job starts
-  if (nextJobStartTime) {
-    const nextStart = new Date(nextJobStartTime);
-    const newEnd = new Date(data.estimatedEndTime);
-    return newEnd <= nextStart;
+  if (nextJobStartTime && scheduleDate) {
+    const nextJobDate = new Date(nextJobStartTime);
+    const [newHour, newMin] = data.estimatedEndTime.split(':').map(Number);
+    
+    const newJobEnd = new Date(scheduleDate);
+    newJobEnd.setHours(newHour, newMin, 0, 0);
+    
+    // If end time is before start time in the form, it crosses midnight - add a day
+    const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
+    if (newHour * 60 + newMin <= startHour * 60 + startMin) {
+      newJobEnd.setDate(newJobEnd.getDate() + 1);
+    }
+    
+    return newJobEnd <= nextJobDate;
   }
   return true;
 }, {
@@ -74,15 +92,19 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
   const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
   const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
 
-  const editJobFormSchema = createEditJobFormSchema(previousJobEndTime, nextJobStartTime);
+  // Extract schedule date from job
+  const scheduleDate = new Date(job.estimatedStartTime).toISOString().split('T')[0];
+  const editJobFormSchema = createEditJobFormSchema(previousJobEndTime, nextJobStartTime, scheduleDate);
 
-  // Helper to safely format date for datetime-local input
-  const formatDateForInput = (date: Date | string): string => {
+  // Helper to extract time (HH:MM) from datetime
+  const formatTimeForInput = (date: Date | string): string => {
     try {
       const dateObj = typeof date === 'string' ? new Date(date) : date;
-      return dateObj.toISOString().slice(0, 16);
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
     } catch {
-      return new Date().toISOString().slice(0, 16);
+      return "09:00";
     }
   };
 
@@ -97,16 +119,14 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
       toLocation: job.toLocation,
       toLat: job.toLat,
       toLng: job.toLng,
-      estimatedStartTime: formatDateForInput(job.estimatedStartTime),
-      estimatedEndTime: formatDateForInput(job.estimatedEndTime),
+      estimatedStartTime: formatTimeForInput(job.estimatedStartTime),
+      estimatedEndTime: formatTimeForInput(job.estimatedEndTime),
     },
   });
 
   // Reset form when job changes
   useEffect(() => {
     if (open && job) {
-      const startTime = formatDateForInput(job.estimatedStartTime);
-      
       form.reset({
         fromPostcode: "",
         fromLocation: job.fromLocation,
@@ -116,8 +136,8 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
         toLocation: job.toLocation,
         toLat: job.toLat,
         toLng: job.toLng,
-        estimatedStartTime: startTime,
-        estimatedEndTime: formatDateForInput(job.estimatedEndTime),
+        estimatedStartTime: formatTimeForInput(job.estimatedStartTime),
+        estimatedEndTime: formatTimeForInput(job.estimatedEndTime),
       });
     }
   }, [open, job, form]);
@@ -145,9 +165,17 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
     }
     
     const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
-    const startDate = new Date(estimatedStartTime);
-    const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
-    const formattedEnd = endDate.toISOString().slice(0, 16);
+    
+    // Parse the start time (HH:MM) and add journey minutes
+    const [startHour, startMin] = estimatedStartTime.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMin;
+    const endTotalMinutes = startTotalMinutes + journeyMinutes;
+    
+    // Convert back to HH:MM format
+    const endHour = Math.floor(endTotalMinutes / 60) % 24;
+    const endMin = endTotalMinutes % 60;
+    const formattedEnd = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+    
     form.setValue("estimatedEndTime", formattedEnd);
     
     toast({
@@ -161,6 +189,25 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
       const FALLBACK_LAT = 53.4808;
       const FALLBACK_LNG = -2.2426;
       
+      // Extract schedule date from existing job
+      const existingStart = new Date(job.estimatedStartTime);
+      const scheduleDate = existingStart.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // Create datetime objects
+      const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
+      const [endHour, endMin] = data.estimatedEndTime.split(':').map(Number);
+      
+      const startDate = new Date(scheduleDate);
+      startDate.setHours(startHour, startMin, 0, 0);
+      
+      const endDate = new Date(scheduleDate);
+      endDate.setHours(endHour, endMin, 0, 0);
+      
+      // If end time is before start time, it crosses midnight - add a day
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
       const res = await apiRequest("PATCH", `/api/jobs/${job.id}`, {
         fromLocation: data.fromLocation,
         fromLat: data.fromLat || FALLBACK_LAT,
@@ -168,8 +215,8 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
         toLocation: data.toLocation,
         toLat: data.toLat || FALLBACK_LAT,
         toLng: data.toLng || FALLBACK_LNG,
-        estimatedStartTime: data.estimatedStartTime,
-        estimatedEndTime: data.estimatedEndTime,
+        estimatedStartTime: startDate.toISOString(),
+        estimatedEndTime: endDate.toISOString(),
       });
       return res.json();
     },
@@ -457,9 +504,9 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
                 name="estimatedStartTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated Start Time</FormLabel>
+                    <FormLabel>Start Time</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} data-testid="input-edit-start-time" />
+                      <Input type="time" {...field} data-testid="input-edit-start-time" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -471,9 +518,9 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
                 name="estimatedEndTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated End Time</FormLabel>
+                    <FormLabel>End Time</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} data-testid="input-edit-end-time" />
+                      <Input type="time" {...field} data-testid="input-edit-end-time" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

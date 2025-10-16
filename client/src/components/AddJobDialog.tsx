@@ -31,32 +31,33 @@ const createJobFormSchema = (lastJobEndTime?: string, scheduleDate?: string) => 
   toLocation: z.string().min(1, "Delivery location is required"),
   toLat: z.number(),
   toLng: z.number(),
-  estimatedStartTime: z.string().min(1, "Start time is required"),
-  estimatedEndTime: z.string().min(1, "End time is required"),
+  estimatedStartTime: z.string().min(1, "Start time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
+  estimatedEndTime: z.string().min(1, "End time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
 }).refine((data) => {
   // Validate that end time is after start time
-  const startDate = new Date(data.estimatedStartTime);
-  const endDate = new Date(data.estimatedEndTime);
-  return endDate > startDate;
+  // Note: We allow cross-midnight jobs (end time can be "earlier" if it's next day)
+  const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
+  const [endHour, endMin] = data.estimatedEndTime.split(':').map(Number);
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+  
+  // Allow same time (will be caught by minimum duration if needed), or end after start
+  // OR end "before" start (cross-midnight scenario)
+  return endMinutes !== startMinutes;
 }, {
-  message: "End time must be after start time",
+  message: "End time cannot be the same as start time",
   path: ["estimatedEndTime"],
 }).refine((data) => {
-  // Validate that job date matches schedule date
-  if (scheduleDate) {
-    const jobDate = data.estimatedStartTime.split('T')[0]; // Get YYYY-MM-DD part
-    return jobDate === scheduleDate;
-  }
-  return true;
-}, {
-  message: "Job must be scheduled for the selected date",
-  path: ["estimatedStartTime"],
-}).refine((data) => {
   // Validate that new job starts after previous job ends
-  if (lastJobEndTime) {
-    const lastJobEnd = new Date(lastJobEndTime);
-    const newJobStart = new Date(data.estimatedStartTime);
-    return newJobStart >= lastJobEnd;
+  if (lastJobEndTime && scheduleDate) {
+    // Create full datetime for comparison
+    const lastJobDate = new Date(lastJobEndTime);
+    const [newHour, newMin] = data.estimatedStartTime.split(':').map(Number);
+    
+    const newJobStart = new Date(scheduleDate);
+    newJobStart.setHours(newHour, newMin, 0, 0);
+    
+    return newJobStart >= lastJobDate;
   }
   return true;
 }, {
@@ -89,18 +90,15 @@ const getDefaultTimes = (scheduleDate: string) => {
   const endTime = new Date(startTime);
   endTime.setHours(endTime.getHours() + 2);
   
-  const formatDateTime = (date: Date) => {
-    const dateYear = date.getFullYear();
-    const dateMonth = String(date.getMonth() + 1).padStart(2, '0');
-    const dateDay = String(date.getDate()).padStart(2, '0');
+  const formatTime = (date: Date) => {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${dateYear}-${dateMonth}-${dateDay}T${hours}:${minutes}`;
+    return `${hours}:${minutes}`;
   };
   
   return {
-    start: formatDateTime(startTime),
-    end: formatDateTime(endTime),
+    start: formatTime(startTime),
+    end: formatTime(endTime),
   };
 };
 
@@ -167,9 +165,17 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     }
     
     const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
-    const startDate = new Date(estimatedStartTime);
-    const endDate = new Date(startDate.getTime() + journeyMinutes * 60000);
-    const formattedEnd = endDate.toISOString().slice(0, 16);
+    
+    // Parse the start time (HH:MM) and add journey minutes
+    const [startHour, startMin] = estimatedStartTime.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMin;
+    const endTotalMinutes = startTotalMinutes + journeyMinutes;
+    
+    // Convert back to HH:MM format
+    const endHour = Math.floor(endTotalMinutes / 60) % 24;
+    const endMin = endTotalMinutes % 60;
+    const formattedEnd = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+    
     form.setValue("estimatedEndTime", formattedEnd);
     
     toast({
@@ -184,6 +190,21 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       const FALLBACK_LAT = 53.4808;
       const FALLBACK_LNG = -2.2426;
       
+      // Create datetime objects
+      const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
+      const [endHour, endMin] = data.estimatedEndTime.split(':').map(Number);
+      
+      const startDate = new Date(scheduleDate);
+      startDate.setHours(startHour, startMin, 0, 0);
+      
+      const endDate = new Date(scheduleDate);
+      endDate.setHours(endHour, endMin, 0, 0);
+      
+      // If end time is before start time, it crosses midnight - add a day
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
       const res = await apiRequest("POST", "/api/jobs", {
         scheduleId,
         fromLocation: data.fromLocation,
@@ -192,8 +213,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
         toLocation: data.toLocation,
         toLat: data.toLat || FALLBACK_LAT,
         toLng: data.toLng || FALLBACK_LNG,
-        estimatedStartTime: data.estimatedStartTime,
-        estimatedEndTime: data.estimatedEndTime,
+        estimatedStartTime: startDate.toISOString(),
+        estimatedEndTime: endDate.toISOString(),
         orderInSchedule: jobCount + 1,
         status: "pending",
       });
@@ -566,13 +587,11 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 name="estimatedStartTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated Start Time</FormLabel>
+                    <FormLabel>Start Time</FormLabel>
                     <FormControl>
                       <Input
-                        type="datetime-local"
+                        type="time"
                         {...field}
-                        min={`${scheduleDate}T00:00`}
-                        max={`${scheduleDate}T23:59`}
                         data-testid="input-start-time"
                       />
                     </FormControl>
@@ -586,13 +605,11 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 name="estimatedEndTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated End Time</FormLabel>
+                    <FormLabel>End Time</FormLabel>
                     <FormControl>
                       <Input
-                        type="datetime-local"
+                        type="time"
                         {...field}
-                        min={`${scheduleDate}T00:00`}
-                        max={`${scheduleDate}T23:59`}
                         data-testid="input-end-time"
                       />
                     </FormControl>

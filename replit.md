@@ -128,24 +128,26 @@ The application features clear separation between frontend, backend, and shared 
    - Impact: Prevents nonsensical schedules, ensures accurate journey times in Edit dialog
 
 8. **Sequential Job Validation** (Implemented)
-   - Feature: Enforces chronological job ordering within daily schedules
+   - Feature: Enforces chronological job ordering within daily schedules with cross-midnight support
    - Add Job: New jobs must start after the previous job ends (prevents overlapping)
    - Edit Job: Edited jobs must fit between adjacent jobs (after previous, before next)
-   - Implementation: Dynamic schema factories (`createJobFormSchema`, `createEditJobFormSchema`)
-   - Validation Logic: Uses `.refine()` to check `start >= prevEnd` and `end <= nextStart`
+   - Implementation: Dynamic schema factories with schedule date awareness
+   - Validation Logic: Uses full datetime comparison (not time-only) to check `start >= prevEnd` and `end <= nextStart`
+   - Cross-Midnight: Properly handles jobs spanning midnight in both validation and next-job constraint
    - Error Messages: Clear field-specific errors ("Job must start after the previous job ends")
-   - Testing: E2E test verified cannot create/edit jobs with overlapping times
-   - Impact: Ensures logical daily schedules where jobs follow a sensible chronological order
+   - Testing: E2E test verified overlapping prevention and cross-midnight job editing
+   - Impact: Ensures logical daily schedules where jobs follow chronological order, including overnight deliveries
 
-9. **Schedule Date Integration** (Implemented)
-   - Issue: Jobs could be created on any date, ignoring the selected schedule date
-   - Fix: Jobs now automatically use and enforce the selected schedule date
+9. **Time-Only Inputs with Cross-Midnight Support** (Implemented)
+   - Feature: Simplified time inputs (HH:MM format) with automatic cross-midnight detection
+   - Input Type: Changed from datetime-local to time-only inputs (schedule date is implicit)
    - Default Times: If schedule date is today → current time rounded to 15-min; if future/past → 9:00 AM
-   - Input Restrictions: Datetime-local inputs have min/max attributes limiting selection to schedule date only
-   - Validation: Schema validation ensures job date matches schedule date as backup
-   - UI Constraint: Browser's native date picker prevents selecting different dates
-   - Testing: E2E test verified inputs restricted to schedule date and job created successfully
-   - Impact: Jobs are always created on the correct schedule date, eliminating user confusion
+   - Cross-Midnight Detection: When end time <= start time, system automatically adds +1 day to end datetime
+   - Backend Integration: Forms combine time with schedule date, sending correct ISO datetimes to API
+   - Example: Start 23:00 on Oct 16 + End 01:00 → Backend receives Oct 16 23:00 to Oct 17 01:00
+   - Validation: Prevents identical start/end times, allows all other combinations including cross-midnight
+   - Testing: E2E test verified 23:00→01:00 job creation and editing with correct date handling
+   - Impact: Supports overnight deliveries while maintaining simpler UX (drivers only think about times, not dates)
 
 10. **Job Deletion** (Implemented)
    - Feature: Delete button for pending jobs in Schedule page
