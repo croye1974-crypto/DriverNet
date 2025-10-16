@@ -225,17 +225,22 @@ export default function MapView({
       const userMarkerSize = Math.max(markerSize + 4, 24); // At least 24px, or 4px larger than others
       const userIconSize = Math.floor(userMarkerSize * 0.6);
       const userBorderWidth = borderWidth + 1;
+      const pulseSize = userMarkerSize + 20; // Pulse ring is 20px larger than marker
       
       const userIcon = L.divIcon({
         className: "custom-marker user-location",
         html: `
-          <div data-testid="marker-user-location" aria-label="Your current location" style="background-color: #8b5cf6; width: ${userMarkerSize}px; height: ${userMarkerSize}px; border-radius: 50%; border: ${userBorderWidth}px solid white; box-shadow: 0 2px 6px rgba(139,92,246,0.5); display: flex; align-items: center; justify-content: center; position: relative;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="${userIconSize}" height="${userIconSize}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-            <div style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white;">●</div>
+          <div style="position: relative; width: ${pulseSize}px; height: ${pulseSize}px; display: flex; align-items: center; justify-content: center;">
+            <div data-testid="pulse-ring" class="user-location-pulse" style="position: absolute; width: ${userMarkerSize + 16}px; height: ${userMarkerSize + 16}px; border-radius: 50%; background-color: rgba(139, 92, 246, 0.3); border: 3px solid rgba(139, 92, 246, 0.6);"></div>
+            <div data-testid="marker-user-location" aria-label="Your current location" style="background-color: #8b5cf6; width: ${userMarkerSize}px; height: ${userMarkerSize}px; border-radius: 50%; border: ${userBorderWidth}px solid white; box-shadow: 0 3px 8px rgba(139,92,246,0.6), 0 0 20px rgba(139,92,246,0.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="${userIconSize}" height="${userIconSize}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+              <div data-testid="red-indicator" style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">●</div>
+            </div>
+            <div data-testid="you-label" style="position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%); background: white; color: #8b5cf6; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border: 1px solid #8b5cf6;">You</div>
           </div>
         `,
-        iconSize: [userMarkerSize, userMarkerSize],
-        iconAnchor: [userMarkerSize / 2, userMarkerSize / 2],
+        iconSize: [pulseSize, pulseSize],
+        iconAnchor: [pulseSize / 2, pulseSize / 2],
       });
 
       const userMarker = L.marker([userLocation.lat, userLocation.lng], {
