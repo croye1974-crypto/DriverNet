@@ -99,8 +99,11 @@ The application features clear separation between frontend, backend, and shared 
    - Impact: No more React errors with date selection
 
 ### Testing Infrastructure
-- **Playwright Configuration**: Added `playwright.config.ts` to run tests only in `/tests` folder
-- **API Health Check**: Added `/api/health` endpoint returning `{ ok: true }`
-- **Smoke Test**: Created `tests/api.health.spec.ts` for quick API verification
-- **Comprehensive E2E Tests**: Playwright-based functional testing covering all major features
-- **Test Coverage**: Successfully tested job creation, check-in/out, map view, messaging, profile editing, and navigation
+- **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure
+- **Test Helper API**: Dev-only endpoints (`/api/test/seed-user`, `/api/test/logout`) for creating test sessions without Stripe
+- **API Health Check**: `/api/health` endpoint returning `{ ok: true }` for monitoring
+- **Smoke Tests**: Basic UI and navigation verification (`tests/smoke.spec.ts`)
+- **Multi-User E2E Tests**: Concurrent driver scenarios with GPS simulation (`tests/multiuser.e2e.spec.ts`)
+- **Load Testing**: Artillery configuration for 80+ concurrent users with HTTP/WebSocket traffic (`artillery.yml`)
+- **WebSocket Stress Testing**: Script to simulate 100+ drivers sending live GPS updates (`scripts/pingers.ts`)
+- **Test Coverage**: API endpoints, UI flows, concurrent users, real-time WebSocket, performance under load

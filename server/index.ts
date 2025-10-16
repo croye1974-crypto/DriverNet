@@ -9,6 +9,7 @@ import compression from "compression";
 import { registerRoutes } from "./routes";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerStripeRoutes } from "./routes/stripe";
+import { registerTestHelpers } from "./test-helper";
 import { setupVite, serveStatic, log } from "./vite";
 
 // ------------------------------------
@@ -70,6 +71,11 @@ app.use(
     },
   })
 );
+
+// ------------------------------------
+// ✅ 2.5. Test helpers (dev only)
+// ------------------------------------
+registerTestHelpers(app);
 
 // ------------------------------------
 // ✅ 3. Rate limiters

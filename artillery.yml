@@ -1,0 +1,59 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: warmup
+    - duration: 120
+      arrivalRate: 25
+      rampTo: 80
+      name: ramp
+    - duration: 180
+      arrivalRate: 80
+      name: sustain
+  plugins:
+    ensure:
+      thresholds:
+        - http.response_time.p95: 900
+        - http.response_time.p99: 1600
+        - http.codes.200: 95
+  engines:
+    ws: {}
+scenarios:
+  - name: browse post and ws
+    flow:
+      - post:
+          url: "/api/test/seed-user"
+          json:
+            id: "VU-{{ $randomNumber(1, 999999) }}"
+            email: "vu{{ $randomNumber(1, 999999) }}@drivenet.local"
+            sub: "active"
+      - get:
+          url: "/api/health"
+      - get:
+          url: "/api/jobs/recent-check-ins"
+      - post:
+          url: "/api/jobs"
+          json:
+            scheduleId: "test-schedule"
+            fromLocation: "London"
+            fromLat: 51.5074
+            fromLng: -0.1278
+            toLocation: "Birmingham"
+            toLat: 52.4862
+            toLng: -1.8904
+            estimatedStartTime: "2025-10-21T08:30"
+            estimatedEndTime: "2025-10-21T10:30"
+            orderInSchedule: 1
+            status: "pending"
+      - think: 2
+      - ws:
+          connect: "ws://localhost:5000"
+      - think: 5
+      - ws:
+          send: '{ "type": "location", "lat": 51.50, "lng": -0.14 }'
+      - think: 2
+      - ws:
+          send: '{ "type": "ping" }'
+      - ws:
+          close: {}
