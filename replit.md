@@ -54,14 +54,20 @@ The application features clear separation between frontend, backend, and shared 
 ## Recent Feature Implementations
 
 ### Your Location on Map (Implemented)
-- Feature: Always-visible user location marker on map view
+- Feature: Always-visible user location marker on map view with enhanced visibility
 - Bottom Navigation: Renamed "Find Lifts" to "Map" for clarity
-- Location Marker: Purple marker with pulsing red indicator shows user's GPS position
+- Location Marker: Purple marker with pulsing purple ring animation (2s ease-out infinite) draws immediate attention
+- Visual Components: 
+  - Animated pulse ring (purple, semi-transparent, expands outward)
+  - Main purple marker (larger than other markers)
+  - Red indicator dot (top-right corner)
+  - "You" label (white background, purple text, positioned below marker)
 - Map Legend: Updated to show "Your Location" (purple), "Lift Offers" (blue), "Lift Requests" (green)
-- GPS Integration: Automatic location detection with fallback to Birmingham, UK
-- Visibility: User location marker always on top (z-index 1000) and slightly larger than other markers
+- GPS Integration: Automatic location detection with fallback to Birmingham, UK (52.4862, -1.8904)
+- Visibility: User location marker always on top (z-index 1000), responsive to zoom levels
+- Test IDs: All components have data-testid attributes (pulse-ring, marker-user-location, red-indicator, you-label)
 - Access: Map tab constantly available in bottom navigation for instant location awareness
-- Impact: Drivers can see their exact position at all times relative to nearby drivers and lift requests
+- Impact: Drivers can see their exact position at all times with clear visual distinction from other markers
 
 ### Offer Lift Confirmation (Implemented)
 - Feature: Confirmation dialog when offering a lift to a requesting driver
