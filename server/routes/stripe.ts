@@ -91,9 +91,9 @@ export function registerStripeRoutes(app: Express) {
       const user = await storage.getUser(userId);
 
       if (!user?.stripeCustomerId) {
-        return res.status(400).json({ 
-          error: 'No subscription found',
-          message: 'Please subscribe to a plan first'
+        return res.status(200).json({ 
+          error: 'No subscription found. Please subscribe to a plan first.',
+          fallback: true
         });
       }
 
@@ -106,16 +106,18 @@ export function registerStripeRoutes(app: Express) {
     } catch (error: any) {
       console.error('Create portal session error:', error);
       
-      // Handle Stripe portal configuration error
-      if (error.code === 'billing_portal_configuration_inactive') {
-        return res.status(503).json({ 
-          error: 'Portal not configured',
-          message: 'Customer portal is not yet configured. Please contact support.',
-          setupRequired: true
+      // Handle Stripe portal configuration error gracefully
+      if (error.code === 'billing_portal_configuration_inactive' || error.type === 'invalid_request_error') {
+        return res.status(200).json({ 
+          error: 'Customer portal configuration is incomplete. Please contact support to manage your subscription.',
+          fallback: true
         });
       }
       
-      res.status(500).json({ error: 'Failed to create portal session' });
+      res.status(200).json({ 
+        error: 'Unable to open subscription portal. Please contact support.',
+        fallback: true
+      });
     }
   });
 

@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Star, Trophy, TrendingUp, Award, Zap, Target } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { UserStats, UserBadge, Badge as BadgeType, SelectUser } from "@shared/schema";
 
 const currentUserId = "user-1"; // Mock - will be replaced with real auth
@@ -23,6 +25,8 @@ const getTierConfig = (tier: string) => {
 };
 
 export default function Profile() {
+  const { toast } = useToast();
+  
   const { data: user, isLoading: userLoading } = useQuery<SelectUser>({
     queryKey: ["/api/users", currentUserId],
   });
@@ -33,6 +37,32 @@ export default function Profile() {
 
   const { data: userBadges = [] } = useQuery<(UserBadge & { badge: BadgeType })[]>({
     queryKey: ["/api/users", currentUserId, "badges"],
+  });
+
+  const manageSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/stripe/create-portal-session");
+      const data = await response.json() as { url?: string; error?: string; fallback?: boolean };
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data.error || data.fallback) {
+        toast({
+          title: "Customer Portal Unavailable",
+          description: data.error || "The customer portal is not configured. Please contact support to manage your subscription.",
+          variant: "destructive",
+        });
+      } else if (data.url) {
+        window.open(data.url, '_blank');
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open subscription management portal",
+        variant: "destructive",
+      });
+    },
   });
 
   const tierConfig = getTierConfig(stats?.tier || 'bronze');
@@ -203,9 +233,20 @@ export default function Profile() {
           </div>
         </Card>
 
-        <Button variant="outline" className="w-full" data-testid="button-edit-profile">
-          Edit Profile
-        </Button>
+        <div className="space-y-2">
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            data-testid="button-manage-subscription"
+            onClick={() => manageSubscriptionMutation.mutate()}
+            disabled={manageSubscriptionMutation.isPending}
+          >
+            {manageSubscriptionMutation.isPending ? "Opening..." : "Manage Subscription"}
+          </Button>
+          <Button variant="outline" className="w-full" data-testid="button-edit-profile">
+            Edit Profile
+          </Button>
+        </div>
       </div>
     </div>
   );
