@@ -96,11 +96,12 @@ export default function MapView({
 
     const map = mapRef.current;
 
-    // Clear existing markers and polylines
+    // Clear existing markers and polylines (but keep tile layers!)
     map.eachLayer((layer) => {
       if (layer instanceof L.Marker || layer instanceof L.Polyline) {
         map.removeLayer(layer);
       }
+      // Don't remove tile layers (L.TileLayer) or controls
     });
 
     const bounds = L.latLngBounds([]);
@@ -111,7 +112,7 @@ export default function MapView({
       const offerIcon = L.divIcon({
         className: "custom-marker",
         html: `
-          <div data-marker-id="${offer.id}" data-marker-type="offer" style="background-color: #3b82f6; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
+          <div data-testid="marker-offer-${offer.id}" data-marker-id="${offer.id}" data-marker-type="offer" role="button" aria-label="Lift offer from ${offer.fromLocation}" tabindex="0" style="background-color: #3b82f6; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
           </div>
         `,
@@ -145,7 +146,7 @@ export default function MapView({
       const requestIcon = L.divIcon({
         className: "custom-marker",
         html: `
-          <div data-marker-id="${request.id}" data-marker-type="request" style="background-color: #22c55e; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
+          <div data-testid="marker-request-${request.id}" data-marker-id="${request.id}" data-marker-type="request" role="button" aria-label="Lift request from ${request.fromLocation}" tabindex="0" style="background-color: #22c55e; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           </div>
         `,
