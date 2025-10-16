@@ -679,7 +679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 lat: job.checkOutLat,
                 lng: job.checkOutLng,
                 location: job.toLocation,
-                timestamp: job.actualEndTime,
+                timestamp: job.actualEndTime.toString(),
               };
             }
           }
@@ -692,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 lat: job.checkInLat,
                 lng: job.checkInLng,
                 location: job.fromLocation,
-                timestamp: job.actualStartTime,
+                timestamp: job.actualStartTime.toString(),
               };
             }
           }

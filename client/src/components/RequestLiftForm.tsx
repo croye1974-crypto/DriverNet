@@ -24,7 +24,11 @@ export default function RequestLiftForm({ onSubmit }: RequestLiftFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit?.({ from, to, datetime, notes });
-    console.log("Request submitted:", { from, to, datetime, notes });
+    // Clear form after submission
+    setFrom("");
+    setTo("");
+    setDatetime("");
+    setNotes("");
   };
 
   return (
