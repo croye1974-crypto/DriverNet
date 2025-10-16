@@ -1,10 +1,61 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import MemoryStore from "memorystore";
+import rateLimit from "express-rate-limit";
+import cors from "cors";
 import { registerRoutes } from "./routes";
+import { registerAuthRoutes } from "./routes/auth";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 login attempts per 15 minutes
+  message: "Too many login attempts, please try again later.",
+  skipSuccessfulRequests: true,
+});
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.CLIENT_URL || false 
+    : true,
+  credentials: true,
+}));
+
+// Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session management
+const MemStore = MemoryStore(session);
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  store: new MemStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  }),
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  },
+}));
+
+// Apply rate limiters
+app.use('/api/', limiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,6 +88,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Register auth routes first
+  registerAuthRoutes(app);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

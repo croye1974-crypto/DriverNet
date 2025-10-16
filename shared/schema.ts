@@ -6,13 +6,22 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password").notNull(), // bcrypt hashed
   name: text("name").notNull(),
   callSign: varchar("call_sign", { length: 6 }).notNull().unique(), // Format: LL#### (e.g., AB1234)
   avatar: text("avatar"),
+  role: text("role").notNull().default("user"), // user, moderator, admin
   rating: real("rating").default(0),
   totalTrips: integer("total_trips").default(0),
   verified: boolean("verified").default(false),
+  
+  // Subscription fields
+  stripeCustomerId: text("stripe_customer_id").unique(),
+  subscriptionStatus: text("subscription_status").default("inactive"), // trialing, active, past_due, canceled, inactive
+  currentPeriodEnd: timestamp("current_period_end"),
+  planId: text("plan_id"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const schedules = pgTable("schedules", {
@@ -136,6 +145,28 @@ export const userBadges = pgTable("user_badges", {
   progress: integer("progress").default(0), // for tracking progress toward badge
 });
 
+// User reports for abuse/safety
+export const reports = pgTable("reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reporterId: varchar("reporter_id").notNull().references(() => users.id),
+  reportedUserId: varchar("reported_user_id").notNull().references(() => users.id),
+  reason: text("reason").notNull(), // harassment, unsafe_driving, fake_location, spam, other
+  description: text("description"),
+  status: text("status").notNull().default("pending"), // pending, reviewed, action_taken, dismissed
+  reviewedBy: varchar("reviewed_by").references(() => users.id), // admin who reviewed
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+// User blocks for privacy
+export const blocks = pgTable("blocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  blockerId: varchar("blocker_id").notNull().references(() => users.id),
+  blockedUserId: varchar("blocked_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -204,8 +235,20 @@ export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
   earnedAt: true,
 });
 
+export const insertReportSchema = createInsertSchema(reports).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+});
+
+export const insertBlockSchema = createInsertSchema(blocks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type SelectUser = typeof users.$inferSelect;
 
 export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
 export type Schedule = typeof schedules.$inferSelect;
@@ -233,3 +276,9 @@ export type Badge = typeof badges.$inferSelect;
 
 export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 export type UserBadge = typeof userBadges.$inferSelect;
+
+export type InsertReport = z.infer<typeof insertReportSchema>;
+export type Report = typeof reports.$inferSelect;
+
+export type InsertBlock = z.infer<typeof insertBlockSchema>;
+export type Block = typeof blocks.$inferSelect;

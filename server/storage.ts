@@ -9,8 +9,11 @@ import {
   type UserStats, type InsertUserStats,
   type Badge, type InsertBadge,
   type UserBadge, type InsertUserBadge,
+  type Report, type InsertReport,
+  type Block, type InsertBlock,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -40,6 +43,12 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserSubscription(userId: string, updates: {
+    stripeCustomerId?: string;
+    subscriptionStatus?: string;
+    currentPeriodEnd?: Date | null;
+    planId?: string | null;
+  }): Promise<User | undefined>;
   
   // Schedules
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
@@ -142,11 +151,78 @@ export class MemStorage implements IStorage {
       return;
     }
 
+    // Hash password 'demo' for demo users (synchronous for seed data)
+    const hashedPassword = bcrypt.hashSync('demo', 10);
+
     const demoUsers: User[] = [
-      { id: 'user-1', username: 'john_driver', password: 'demo', name: 'John Smith', callSign: 'JS1234', avatar: null, rating: 4.8, totalTrips: 156, verified: true },
-      { id: 'user-2', username: 'sarah_delivers', password: 'demo', name: 'Sarah Johnson', callSign: 'SJ5678', avatar: null, rating: 4.9, totalTrips: 203, verified: true },
-      { id: 'user-3', username: 'mike_transport', password: 'demo', name: 'Mike Williams', callSign: 'MW9012', avatar: null, rating: 4.7, totalTrips: 98, verified: true },
-      { id: 'user-4', username: 'emma_driver', password: 'demo', name: 'Emma Brown', callSign: 'EB3456', avatar: null, rating: 4.6, totalTrips: 134, verified: true },
+      { 
+        id: 'user-1', 
+        username: 'john_driver', 
+        password: hashedPassword, 
+        name: 'John Smith', 
+        callSign: 'JS1234', 
+        avatar: null, 
+        role: 'user',
+        rating: 4.8, 
+        totalTrips: 156, 
+        verified: true,
+        stripeCustomerId: null,
+        subscriptionStatus: 'active', // Give demo users active subscription
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        planId: 'demo-plan',
+        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
+      },
+      { 
+        id: 'user-2', 
+        username: 'sarah_delivers', 
+        password: hashedPassword, 
+        name: 'Sarah Johnson', 
+        callSign: 'SJ5678', 
+        avatar: null, 
+        role: 'user',
+        rating: 4.9, 
+        totalTrips: 203, 
+        verified: true,
+        stripeCustomerId: null,
+        subscriptionStatus: 'active',
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        planId: 'demo-plan',
+        createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // 120 days ago
+      },
+      { 
+        id: 'user-3', 
+        username: 'mike_transport', 
+        password: hashedPassword, 
+        name: 'Mike Williams', 
+        callSign: 'MW9012', 
+        avatar: null, 
+        role: 'user',
+        rating: 4.7, 
+        totalTrips: 98, 
+        verified: true,
+        stripeCustomerId: null,
+        subscriptionStatus: 'active',
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        planId: 'demo-plan',
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
+      },
+      { 
+        id: 'user-4', 
+        username: 'emma_driver', 
+        password: hashedPassword, 
+        name: 'Emma Brown', 
+        callSign: 'EB3456', 
+        avatar: null, 
+        role: 'moderator', // Make one demo user a moderator for testing
+        rating: 4.6, 
+        totalTrips: 134, 
+        verified: true,
+        stripeCustomerId: null,
+        subscriptionStatus: 'active',
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        planId: 'demo-plan',
+        createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+      },
     ];
 
     demoUsers.forEach(user => {
@@ -252,16 +328,52 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    let callSign = generateCallSign();
+    
+    // Ensure unique call sign
+    while (Array.from(this.users.values()).some(u => u.callSign === callSign)) {
+      callSign = generateCallSign();
+    }
+    
     const user: User = { 
       ...insertUser, 
       id,
+      callSign,
+      role: 'user',
       rating: 0,
       totalTrips: 0,
       verified: false,
       avatar: insertUser.avatar ?? null,
+      stripeCustomerId: null,
+      subscriptionStatus: 'inactive',
+      currentPeriodEnd: null,
+      planId: null,
+      createdAt: new Date(),
     };
     this.users.set(id, user);
+    
+    // Initialize user stats
+    await this.createUserStats(id);
+    
     return user;
+  }
+
+  async updateUserSubscription(userId: string, updates: {
+    stripeCustomerId?: string;
+    subscriptionStatus?: string;
+    currentPeriodEnd?: Date | null;
+    planId?: string | null;
+  }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    
+    const updatedUser = {
+      ...user,
+      ...updates,
+    };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
   }
 
   // Schedules
