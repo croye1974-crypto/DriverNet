@@ -135,6 +135,16 @@ The application features clear separation between frontend, backend, and shared 
    - Testing: E2E test verified cannot create/edit jobs with overlapping times
    - Impact: Ensures logical daily schedules where jobs follow a sensible chronological order
 
+9. **Schedule Date Integration** (Implemented)
+   - Issue: Jobs could be created on any date, ignoring the selected schedule date
+   - Fix: Jobs now automatically use and enforce the selected schedule date
+   - Default Times: If schedule date is today → current time rounded to 15-min; if future/past → 9:00 AM
+   - Input Restrictions: Datetime-local inputs have min/max attributes limiting selection to schedule date only
+   - Validation: Schema validation ensures job date matches schedule date as backup
+   - UI Constraint: Browser's native date picker prevents selecting different dates
+   - Testing: E2E test verified inputs restricted to schedule date and job created successfully
+   - Impact: Jobs are always created on the correct schedule date, eliminating user confusion
+
 ### Testing Infrastructure
 - **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure
 - **Test Helper API**: Dev-only endpoints (`/api/test/seed-user`, `/api/test/logout`) for creating test sessions without Stripe
