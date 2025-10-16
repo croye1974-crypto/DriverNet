@@ -125,6 +125,16 @@ The application features clear separation between frontend, backend, and shared 
    - Testing: E2E test verified validation blocks invalid dates and journey auto-updates
    - Impact: Prevents nonsensical schedules, ensures accurate journey times in Edit dialog
 
+8. **Sequential Job Validation** (Implemented)
+   - Feature: Enforces chronological job ordering within daily schedules
+   - Add Job: New jobs must start after the previous job ends (prevents overlapping)
+   - Edit Job: Edited jobs must fit between adjacent jobs (after previous, before next)
+   - Implementation: Dynamic schema factories (`createJobFormSchema`, `createEditJobFormSchema`)
+   - Validation Logic: Uses `.refine()` to check `start >= prevEnd` and `end <= nextStart`
+   - Error Messages: Clear field-specific errors ("Job must start after the previous job ends")
+   - Testing: E2E test verified cannot create/edit jobs with overlapping times
+   - Impact: Ensures logical daily schedules where jobs follow a sensible chronological order
+
 ### Testing Infrastructure
 - **Playwright Configuration**: Multi-project setup (Desktop Chrome + iPhone 13) with HTML reports, screenshots, and video on failure
 - **Test Helper API**: Dev-only endpoints (`/api/test/seed-user`, `/api/test/logout`) for creating test sessions without Stripe
