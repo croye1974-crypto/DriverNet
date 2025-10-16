@@ -45,8 +45,12 @@ export default function MapView({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    // Initialize map
-    const map = L.map(mapContainerRef.current).setView(center, zoom);
+    // Initialize map with mobile tap support
+    const map = L.map(mapContainerRef.current, {
+      tap: true,
+      tapTolerance: 20, // Larger touch tolerance for mobile
+      touchZoom: true,
+    }).setView(center, zoom);
     mapRef.current = map;
 
     // Add OpenStreetMap tile layer
@@ -103,25 +107,30 @@ export default function MapView({
 
     // Add lift offer markers (blue)
     liftOffers.forEach((offer) => {
-      // Pickup marker for lift offer (blue)
+      // Pickup marker for lift offer (blue) - 44px for mobile touch target
       const offerIcon = L.divIcon({
         className: "custom-marker",
         html: `
-          <div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          <div data-marker-id="${offer.id}" data-marker-type="offer" style="background-color: #3b82f6; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
           </div>
         `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
       });
 
       const offerMarker = L.marker([offer.fromLat, offer.fromLng], {
         icon: offerIcon,
+        keyboard: false,
+        riseOnHover: true,
       }).addTo(map);
 
-      // Add click handler
+      // Add click/tap handler for mobile
       if (onOfferClick) {
-        offerMarker.on("click", () => onOfferClick(offer.id));
+        offerMarker.on("click tap", (e) => {
+          L.DomEvent.stopPropagation(e);
+          onOfferClick(offer.id);
+        });
       }
 
       // Extend bounds
@@ -136,21 +145,26 @@ export default function MapView({
       const requestIcon = L.divIcon({
         className: "custom-marker",
         html: `
-          <div style="background-color: #22c55e; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <div data-marker-id="${request.id}" data-marker-type="request" style="background-color: #22c55e; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           </div>
         `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
+        iconSize: [44, 44],
+        iconAnchor: [22, 44],
       });
 
       const requestMarker = L.marker([request.fromLat, request.fromLng], {
         icon: requestIcon,
+        keyboard: false,
+        riseOnHover: true,
       }).addTo(map);
 
-      // Add click handler
+      // Add click/tap handler for mobile
       if (onRequestClick) {
-        requestMarker.on("click", () => onRequestClick(request.id));
+        requestMarker.on("click tap", (e) => {
+          L.DomEvent.stopPropagation(e);
+          onRequestClick(request.id);
+        });
       }
 
       // Extend bounds
