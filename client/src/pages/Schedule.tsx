@@ -221,11 +221,12 @@ export default function Schedule() {
 
         <Button
           onClick={handleAddJob}
+          size="lg"
           className="w-full"
           disabled={createSchedule.isPending || schedulesLoading || schedulesError}
           data-testid="button-add-job"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-5 w-5 mr-2" />
           Add Delivery Job
         </Button>
       </div>
