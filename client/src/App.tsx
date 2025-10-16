@@ -68,7 +68,7 @@ function AppContent() {
         <img 
           src={logoUrl} 
           alt="DriveNet" 
-          className="h-14 w-auto object-contain" 
+          className="h-28 w-auto object-contain" 
           data-testid="img-logo"
         />
         <div className="flex items-center gap-2">
