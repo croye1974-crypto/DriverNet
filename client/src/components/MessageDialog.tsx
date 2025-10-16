@@ -17,7 +17,7 @@ import { useMutation } from "@tanstack/react-query";
 interface MessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  driverName: string;
+  callSign: string;
   fromLocation: string;
   toLocation?: string;
   type: "offer" | "request";
@@ -27,7 +27,7 @@ interface MessageDialogProps {
 export default function MessageDialog({
   open,
   onOpenChange,
-  driverName,
+  callSign,
   fromLocation,
   toLocation,
   type,
@@ -46,7 +46,7 @@ export default function MessageDialog({
     onSuccess: () => {
       toast({
         title: "Request Accepted!",
-        description: `You've accepted ${driverName}'s lift request. The request has been removed from the system.`,
+        description: `You've accepted ${callSign}'s lift request. The request has been removed from the system.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/lift-requests"] });
       onOpenChange(false);
@@ -84,7 +84,7 @@ export default function MessageDialog({
     setTimeout(() => {
       toast({
         title: "Message Sent",
-        description: `Your message to ${driverName} has been sent successfully`,
+        description: `Your message to ${callSign} has been sent successfully`,
       });
       setMessage("");
       setSending(false);
@@ -113,7 +113,7 @@ export default function MessageDialog({
           <div className="bg-muted/50 p-3 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${type === "offer" ? "bg-blue-500" : "bg-green-500"}`} />
-              <span className="font-medium" data-testid="text-driver-name">{driverName}</span>
+              <span className="font-medium" data-testid="text-driver-name">{callSign}</span>
             </div>
             
             <div className="flex items-start gap-2 text-sm text-muted-foreground">

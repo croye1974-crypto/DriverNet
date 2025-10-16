@@ -6,7 +6,7 @@ import { MapPin, Navigation, Clock, Star } from "lucide-react";
 
 interface DriverCardProps {
   id: string;
-  driverName: string;
+  callSign: string;
   driverAvatar?: string;
   fromLocation: string;
   toLocation: string;
@@ -21,7 +21,7 @@ interface DriverCardProps {
 
 export default function DriverCard({
   id,
-  driverName,
+  callSign,
   driverAvatar,
   fromLocation,
   toLocation,
@@ -39,24 +39,20 @@ export default function DriverCard({
     full: { label: "Full", variant: "outline" as const },
   };
 
-  const initials = driverName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
+  const initials = callSign.substring(0, 2).toUpperCase();
 
   return (
     <Card className="p-4 hover-elevate active-elevate-2">
       <div className="flex items-start gap-4">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={driverAvatar} alt={driverName} />
+          <AvatarImage src={driverAvatar} alt={callSign} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-semibold text-sm truncate" data-testid={`text-driver-name-${id}`}>
-              {driverName}
+              {callSign}
             </h3>
             {verified && (
               <Badge variant="outline" className="text-xs px-1.5 py-0">

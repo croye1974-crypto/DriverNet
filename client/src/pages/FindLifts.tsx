@@ -25,7 +25,7 @@ import type { LiftRequest } from "@shared/schema";
 const mockDrivers = [
   {
     id: "1",
-    driverName: "Mike Johnson",
+    callSign: "MJ4782",
     fromLocation: "Birmingham City Centre",
     toLocation: "Manchester Airport",
     departureTime: "14:30",
@@ -40,7 +40,7 @@ const mockDrivers = [
   },
   {
     id: "2",
-    driverName: "Emma Wilson",
+    callSign: "EW9156",
     fromLocation: "Leeds Station",
     toLocation: "York Dealership",
     departureTime: "10:15",
@@ -55,7 +55,7 @@ const mockDrivers = [
   },
   {
     id: "3",
-    driverName: "James Anderson",
+    callSign: "JA6234",
     fromLocation: "Liverpool Docks",
     toLocation: "Preston Services",
     departureTime: "16:45",
@@ -74,18 +74,18 @@ export default function FindLifts() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
-  const [requestingLift, setRequestingLift] = useState<{id: string; driverName: string; fromLocation: string; toLocation: string} | null>(null);
+  const [requestingLift, setRequestingLift] = useState<{id: string; callSign: string; fromLocation: string; toLocation: string} | null>(null);
   const [requestedLifts, setRequestedLifts] = useState<Set<string>>(new Set());
   const [messageDialog, setMessageDialog] = useState<{
     open: boolean;
-    driverName: string;
+    callSign: string;
     fromLocation: string;
     toLocation?: string;
     type: "offer" | "request";
     requestId?: string;
   }>({
     open: false,
-    driverName: "",
+    callSign: "",
     fromLocation: "",
     toLocation: "",
     type: "offer",
@@ -98,7 +98,7 @@ export default function FindLifts() {
 
   const mapOffers = mockDrivers.map((driver) => ({
     id: driver.id,
-    name: driver.driverName,
+    name: driver.callSign,
     fromLat: driver.fromLat,
     fromLng: driver.fromLng,
     toLat: driver.toLat,
@@ -121,7 +121,7 @@ export default function FindLifts() {
     if (driver) {
       setRequestingLift({
         id: driver.id,
-        driverName: driver.driverName,
+        callSign: driver.callSign,
         fromLocation: driver.fromLocation,
         toLocation: driver.toLocation,
       });
@@ -133,7 +133,7 @@ export default function FindLifts() {
       setRequestedLifts(prev => new Set(prev).add(requestingLift.id));
       toast({
         title: "Lift Request Sent",
-        description: `Your request to join ${requestingLift.driverName}'s lift has been sent. They will be notified and can accept or decline.`,
+        description: `Your request to join ${requestingLift.callSign}'s lift has been sent. They will be notified and can accept or decline.`,
       });
       setRequestingLift(null);
     }
@@ -144,7 +144,7 @@ export default function FindLifts() {
     if (offer) {
       setMessageDialog({
         open: true,
-        driverName: offer.driverName,
+        callSign: offer.callSign,
         fromLocation: offer.fromLocation,
         toLocation: offer.toLocation,
         type: "offer",
@@ -157,7 +157,7 @@ export default function FindLifts() {
     if (request) {
       setMessageDialog({
         open: true,
-        driverName: `Request ${request.id}`, // TODO: Fetch actual user name
+        callSign: `Request ${request.id}`, // TODO: Fetch actual call sign
         fromLocation: request.fromLocation,
         toLocation: request.toLocation,
         type: "request",
@@ -236,12 +236,12 @@ export default function FindLifts() {
             ) : (
               liftRequests.map((request) => {
                 const requestedDate = new Date(request.requestedTime);
-                const createdDate = new Date(request.createdAt);
+                const createdDate = request.createdAt ? new Date(request.createdAt) : null;
                 
                 const requestedTime = !isNaN(requestedDate.getTime())
                   ? requestedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                   : 'Unknown';
-                const postedTime = !isNaN(createdDate.getTime())
+                const postedTime = createdDate && !isNaN(createdDate.getTime())
                   ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60)) + ' min ago'
                   : 'Recently';
                 
@@ -273,7 +273,7 @@ export default function FindLifts() {
             <AlertDialogDescription>
               {requestingLift && (
                 <>
-                  You are requesting to join <strong>{requestingLift.driverName}</strong>'s lift from{' '}
+                  You are requesting to join <strong>{requestingLift.callSign}</strong>'s lift from{' '}
                   <strong>{requestingLift.fromLocation}</strong> to{' '}
                   <strong>{requestingLift.toLocation}</strong>.
                   <br /><br />
@@ -295,7 +295,7 @@ export default function FindLifts() {
       <MessageDialog
         open={messageDialog.open}
         onOpenChange={(open) => setMessageDialog(prev => ({ ...prev, open }))}
-        driverName={messageDialog.driverName}
+        callSign={messageDialog.callSign}
         fromLocation={messageDialog.fromLocation}
         toLocation={messageDialog.toLocation}
         type={messageDialog.type}
