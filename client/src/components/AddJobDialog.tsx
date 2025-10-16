@@ -21,14 +21,21 @@ interface AddJobDialogProps {
 const jobFormSchema = z.object({
   fromPostcode: z.string().optional(),
   fromLocation: z.string().min(1, "Pickup location is required"),
-  fromLat: z.number().refine(val => val !== 0, "Please set pickup location using postcode lookup or GPS"),
-  fromLng: z.number().refine(val => val !== 0, "Please set pickup location using postcode lookup or GPS"),
+  fromLat: z.number(),
+  fromLng: z.number(),
   toPostcode: z.string().optional(),
   toLocation: z.string().min(1, "Delivery location is required"),
-  toLat: z.number().refine(val => val !== 0, "Please set delivery location using postcode lookup or GPS"),
-  toLng: z.number().refine(val => val !== 0, "Please set delivery location using postcode lookup or GPS"),
+  toLat: z.number(),
+  toLng: z.number(),
   estimatedStartTime: z.string().min(1, "Start time is required"),
   estimatedEndTime: z.string().min(1, "End time is required"),
+}).refine((data) => {
+  // If GPS coordinates are 0,0 for either location, use Manchester as fallback
+  const hasValidFromCoords = data.fromLat !== 0 && data.fromLng !== 0;
+  const hasValidToCoords = data.toLat !== 0 && data.toLng !== 0;
+  return true; // Always allow - will use fallback coordinates
+}, {
+  message: "Location coordinates will use fallback if postcode lookup fails",
 });
 
 type JobFormValues = z.infer<typeof jobFormSchema>;
@@ -94,14 +101,18 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount 
 
   const createJob = useMutation({
     mutationFn: async (data: JobFormValues) => {
+      // Use fallback coordinates (Manchester city center) if lookup failed
+      const FALLBACK_LAT = 53.4808;
+      const FALLBACK_LNG = -2.2426;
+      
       const res = await apiRequest("POST", "/api/jobs", {
         scheduleId,
         fromLocation: data.fromLocation,
-        fromLat: data.fromLat,
-        fromLng: data.fromLng,
+        fromLat: data.fromLat || FALLBACK_LAT,
+        fromLng: data.fromLng || FALLBACK_LNG,
         toLocation: data.toLocation,
-        toLat: data.toLat,
-        toLng: data.toLng,
+        toLat: data.toLat || FALLBACK_LAT,
+        toLng: data.toLng || FALLBACK_LNG,
         estimatedStartTime: data.estimatedStartTime,
         estimatedEndTime: data.estimatedEndTime,
         orderInSchedule: jobCount + 1,

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
@@ -6,7 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Star, Trophy, TrendingUp, Award, Zap, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { UserStats, UserBadge, Badge as BadgeType, SelectUser } from "@shared/schema";
 
 const currentUserId = "user-1"; // Mock - will be replaced with real auth
@@ -26,6 +37,8 @@ const getTierConfig = (tier: string) => {
 
 export default function Profile() {
   const { toast } = useToast();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState("");
   
   const { data: user, isLoading: userLoading } = useQuery<SelectUser>({
     queryKey: ["/api/users", currentUserId],
@@ -37,6 +50,28 @@ export default function Profile() {
 
   const { data: userBadges = [] } = useQuery<(UserBadge & { badge: BadgeType })[]>({
     queryKey: ["/api/users", currentUserId, "badges"],
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("PATCH", `/api/users/${currentUserId}`, { name });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUserId] });
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
+      });
+      setEditDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const manageSubscriptionMutation = useMutation({
@@ -64,6 +99,17 @@ export default function Profile() {
       });
     },
   });
+
+  const handleEditProfile = () => {
+    setEditName(user?.name || "");
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveProfile = () => {
+    if (editName.trim()) {
+      updateProfileMutation.mutate(editName.trim());
+    }
+  };
 
   const tierConfig = getTierConfig(stats?.tier || 'bronze');
   const reputationScore = stats?.reputationScore || 0;
@@ -243,11 +289,66 @@ export default function Profile() {
           >
             {manageSubscriptionMutation.isPending ? "Opening..." : "Manage Subscription"}
           </Button>
-          <Button variant="outline" className="w-full" data-testid="button-edit-profile">
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            data-testid="button-edit-profile"
+            onClick={handleEditProfile}
+          >
             Edit Profile
           </Button>
         </div>
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent data-testid="dialog-edit-profile">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your profile information. Your call sign cannot be changed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter your name"
+                data-testid="input-edit-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="callsign">Call Sign</Label>
+              <Input
+                id="callsign"
+                value={user?.callSign || ""}
+                disabled
+                className="bg-muted"
+                data-testid="input-callsign-readonly"
+              />
+              <p className="text-xs text-muted-foreground">Call signs are auto-generated and cannot be changed</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setEditDialogOpen(false)}
+              data-testid="button-cancel-edit"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveProfile}
+              disabled={updateProfileMutation.isPending || !editName.trim()}
+              data-testid="button-save-profile"
+            >
+              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

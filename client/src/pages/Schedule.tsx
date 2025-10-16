@@ -207,7 +207,9 @@ export default function Schedule() {
           <div>
             <h2 className="text-xl font-semibold" data-testid="text-schedule-title">My Schedule</h2>
             <p className="text-sm text-muted-foreground" data-testid="text-schedule-date">
-              {format(new Date(selectedDate), "EEEE, MMMM d, yyyy")}
+              {selectedDate && !isNaN(new Date(selectedDate).getTime()) 
+                ? format(new Date(selectedDate), "EEEE, MMMM d, yyyy")
+                : "Select a date"}
             </p>
           </div>
           <input
