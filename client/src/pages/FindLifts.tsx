@@ -96,16 +96,37 @@ export default function FindLifts() {
     queryKey: ["/api/lift-requests"],
   });
 
-  const mapOffers = mockDrivers.map((driver) => ({
-    id: driver.id,
-    name: driver.callSign,
-    fromLat: driver.fromLat,
-    fromLng: driver.fromLng,
-    toLat: driver.toLat,
-    toLng: driver.toLng,
-    fromLocation: driver.fromLocation,
-    toLocation: driver.toLocation,
-  }));
+  // Fetch checked-in drivers from the last 4 hours
+  const { data: checkedInDrivers = [] } = useQuery<any[]>({
+    queryKey: ["/api/jobs/recent-check-ins"],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Combine mock drivers with real checked-in drivers for map display
+  const mapOffers = [
+    ...mockDrivers.map((driver) => ({
+      id: driver.id,
+      name: driver.callSign,
+      fromLat: driver.fromLat,
+      fromLng: driver.fromLng,
+      toLat: driver.toLat,
+      toLng: driver.toLng,
+      fromLocation: driver.fromLocation,
+      toLocation: driver.toLocation,
+    })),
+    ...checkedInDrivers
+      .filter(job => job.checkInLat && job.checkInLng && job.status === 'in-progress')
+      .map((job) => ({
+        id: job.jobId,
+        name: job.callSign || job.driverName,
+        fromLat: job.checkInLat!,
+        fromLng: job.checkInLng!,
+        toLat: job.checkOutLat,
+        toLng: job.checkOutLng,
+        fromLocation: job.fromLocation,
+        toLocation: job.toLocation,
+      }))
+  ];
 
   const mapRequests = liftRequests.map((request) => ({
     id: request.id,

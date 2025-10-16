@@ -221,6 +221,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng
       );
 
+      if (!updatedJob) {
+        return res.status(500).json({ error: "Failed to update job status" });
+      }
+
       // Broadcast check-in notification to all connected clients
       const schedule = await storage.getSchedule(job.scheduleId);
       if (schedule) {
@@ -274,6 +278,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng
       );
 
+      if (!updatedJob) {
+        return res.status(500).json({ error: "Failed to update job status" });
+      }
+
       // Broadcast check-out notification to all connected clients
       const schedule = await storage.getSchedule(job.scheduleId);
       if (schedule) {
@@ -299,6 +307,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Check-out error:", error);
       res.status(500).json({ error: "Failed to check out" });
+    }
+  });
+
+  app.get("/api/jobs/recent-check-ins", async (req, res) => {
+    try {
+      const hoursAgo = parseInt(req.query.hours as string) || 4;
+      const jobs = await storage.getRecentCheckIns(hoursAgo);
+      
+      // Get user details for each job
+      const jobsWithDrivers = await Promise.all(
+        jobs.map(async (job) => {
+          const schedule = await storage.getSchedule(job.scheduleId);
+          if (!schedule) return null;
+          
+          const driver = await storage.getUser(schedule.userId);
+          if (!driver) return null;
+          
+          return {
+            jobId: job.id,
+            driverId: driver.id,
+            driverName: driver.name,
+            callSign: driver.callSign,
+            fromLocation: job.fromLocation,
+            toLocation: job.toLocation,
+            checkInLat: job.checkInLat,
+            checkInLng: job.checkInLng,
+            checkOutLat: job.checkOutLat,
+            checkOutLng: job.checkOutLng,
+            status: job.status,
+            actualStartTime: job.actualStartTime,
+            actualEndTime: job.actualEndTime,
+          };
+        })
+      );
+      
+      // Filter out null values
+      const validJobs = jobsWithDrivers.filter(job => job !== null);
+      
+      res.json(validJobs);
+    } catch (error) {
+      console.error("Get recent check-ins error:", error);
+      res.status(500).json({ error: "Failed to get recent check-ins" });
     }
   });
 
