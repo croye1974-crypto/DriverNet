@@ -99,3 +99,18 @@ The application features clear separation between frontend, backend, and shared 
 - UI Updates: Clear messaging when GPS needed for journey calculation
 - Reset Button: Easily clear form and start over with Reset button
 - Impact: Faster job entry for drivers who know general destinations without needing exact postcodes
+
+### Single Blue Button Workflow (Implemented)
+- Feature: Visual guidance system where only ONE blue button appears at a time to show the next required action
+- Smart Button States: All buttons default to grey (outline), with intelligent highlighting based on workflow state
+- Progressive Flow:
+  1. Type pickup postcode → FROM Search button turns blue (only blue button)
+  2. Click FROM Search → All grey again
+  3. Type delivery postcode → TO Search button turns blue (only blue button)
+  4. Click TO Search → All grey again
+  5. Manually change start time → Calculate Journey turns blue (only blue button)
+  6. Click Calculate Journey → Add Job turns blue when ready (only blue button)
+- Smart Timing: First job defaults to current time or 9AM; subsequent jobs auto-start 15 minutes after previous job ends
+- Error Visibility: Toast notifications now appear above dialogs (z-index 10000) instead of hidden behind
+- Disabled States: Add Job button remains disabled and grey until all required fields complete
+- Impact: Clear, foolproof workflow that guides drivers step-by-step without confusion

@@ -406,7 +406,12 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 <div className="flex items-end">
                   <Button
                     type="button"
-                    variant="default"
+                    variant={
+                      form.watch("fromPostcode") && 
+                      (!form.watch("fromLat") || form.watch("fromLat") === 0)
+                        ? "default"
+                        : "outline"
+                    }
                     onClick={() => lookupPostcode("from")}
                     disabled={lookingUpFromPostcode}
                     data-testid="button-lookup-from-postcode"
@@ -500,7 +505,12 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 <div className="flex items-end">
                   <Button
                     type="button"
-                    variant="default"
+                    variant={
+                      form.watch("toPostcode") && 
+                      (!form.watch("toLat") || form.watch("toLat") === 0)
+                        ? "default"
+                        : "outline"
+                    }
                     onClick={() => lookupPostcode("to")}
                     disabled={lookingUpToPostcode}
                     data-testid="button-lookup-to-postcode"
@@ -641,7 +651,16 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
 
               <Button
                 type="button"
-                variant={manualStartTime ? "default" : "outline"}
+                variant={
+                  // Only blue if manual time set, has coordinates, and no search buttons are waiting
+                  manualStartTime &&
+                  form.watch("fromLat") && form.watch("fromLat") !== 0 &&
+                  form.watch("toLat") && form.watch("toLat") !== 0 &&
+                  !(form.watch("fromPostcode") && (!form.watch("fromLat") || form.watch("fromLat") === 0)) &&
+                  !(form.watch("toPostcode") && (!form.watch("toLat") || form.watch("toLat") === 0))
+                    ? "default"
+                    : "outline"
+                }
                 onClick={handleCalculateJourney}
                 className="w-full"
                 data-testid="button-calculate-journey"
@@ -668,6 +687,25 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
               </Button>
               <Button
                 type="submit"
+                variant={(() => {
+                  const hasFromPostcodeNeedsLookup = form.watch("fromPostcode") && (!form.watch("fromLat") || form.watch("fromLat") === 0);
+                  const hasToPostcodeNeedsLookup = form.watch("toPostcode") && (!form.watch("toLat") || form.watch("toLat") === 0);
+                  const isFormComplete = 
+                    form.watch("fromLocation") &&
+                    form.watch("toLocation") &&
+                    form.watch("estimatedStartTime") &&
+                    form.watch("estimatedEndTime") &&
+                    !createJob.isPending;
+                  
+                  // Only blue when form is complete and no other actions are needed
+                  const shouldBeBlue = 
+                    isFormComplete &&
+                    !hasFromPostcodeNeedsLookup &&
+                    !hasToPostcodeNeedsLookup &&
+                    !manualStartTime;
+                  
+                  return shouldBeBlue ? "default" : "outline";
+                })()}
                 disabled={
                   createJob.isPending ||
                   !form.watch("fromLocation") ||
