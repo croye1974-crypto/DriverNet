@@ -4,7 +4,7 @@ export function calculateDistance(
   lat2: number,
   lon2: number
 ): number {
-  const R = 6371;
+  const R = 3959; // Earth's radius in miles
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -27,10 +27,10 @@ export function estimateJourneyTime(
   fromLng: number,
   toLat: number,
   toLng: number,
-  averageSpeedKmh: number = 80
+  averageSpeedMph: number = 50
 ): number {
-  const distanceKm = calculateDistance(fromLat, fromLng, toLat, toLng);
-  const timeHours = distanceKm / averageSpeedKmh;
+  const distanceMiles = calculateDistance(fromLat, fromLng, toLat, toLng);
+  const timeHours = distanceMiles / averageSpeedMph;
   const timeMinutes = Math.ceil(timeHours * 60);
   return Math.max(1, timeMinutes);
 }
@@ -47,9 +47,9 @@ export function formatDuration(minutes: number): string {
   return `${hours}h ${mins}m`;
 }
 
-export function formatDistance(km: number): string {
-  if (km < 1) {
-    return `${Math.round(km * 1000)}m`;
+export function formatDistance(miles: number): string {
+  if (miles < 0.1) {
+    return `${Math.round(miles * 5280)}ft`;
   }
-  return `${km.toFixed(1)}km`;
+  return `${miles.toFixed(1)} miles`;
 }

@@ -32,7 +32,7 @@ export default function DriverNotifications({
   currentUserLng 
 }: DriverNotificationsProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const maxDistance = 16.09; // 10 miles in km
+  const maxDistance = 10; // 10 miles radius
 
   const handleNotification = useCallback((notification: any) => {
     // Don't show notifications for the current user's own actions

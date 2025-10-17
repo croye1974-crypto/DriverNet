@@ -16,7 +16,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
+  const R = 3959; // Earth's radius in miles
   const toRad = (degrees: number) => (degrees * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);

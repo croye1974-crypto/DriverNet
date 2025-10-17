@@ -22,7 +22,7 @@ const checkInOutSchema = z.object({
 const findMatchesSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  maxDistanceKm: z.number().positive().max(160).optional().default(16.09),
+  maxDistanceMiles: z.number().positive().max(100).optional().default(10),
   hoursAgo: z.number().positive().max(168).optional().default(24),
 });
 
@@ -530,9 +530,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/lift-requests/find-matches", async (req, res) => {
     try {
-      const { lat, lng, maxDistanceKm, hoursAgo } = findMatchesSchema.parse(req.body);
+      const { lat, lng, maxDistanceMiles, hoursAgo } = findMatchesSchema.parse(req.body);
       
-      const matches = await storage.findMatchingDrivers(lat, lng, maxDistanceKm, hoursAgo);
+      const matches = await storage.findMatchingDrivers(lat, lng, maxDistanceMiles, hoursAgo);
       
       const enrichedMatches = await Promise.all(
         matches.map(async (match) => {
