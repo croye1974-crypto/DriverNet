@@ -125,3 +125,14 @@ The application features clear separation between frontend, backend, and shared 
 - Visual Feedback System: Every action provides instant, clear visual feedback without interruption
 - Workflow Speed: Zero toast delays = Ultra-fast job entry for drivers adding multiple deliveries
 - Impact: Drivers can add jobs in seconds without any confirmation popups slowing them down
+
+### Calculate Journey Button Fix (Implemented)
+- Issue: Button didn't turn blue when start time changed (even with valid coordinates)
+- Root Cause: Overly complex logic checking postcode fields instead of just coordinates
+- Fix: Simplified button logic to only check: manual time change + both locations have coordinates
+- Behavior Now:
+  1. Lookup both postcodes → Both have coordinates
+  2. Change start time → Calculate Journey turns BLUE instantly
+  3. Click Calculate Journey → End time fills, button returns to grey
+  4. Change start time again → Calculate Journey turns BLUE again (repeatable)
+- Impact: Drivers can now easily recalculate journey times when adjusting schedules

@@ -581,12 +581,10 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
               <Button
                 type="button"
                 variant={
-                  // Only blue if manual time set, has coordinates, and no search buttons are waiting
+                  // Blue when: manual time changed AND both locations have coordinates
                   manualStartTime &&
                   form.watch("fromLat") && form.watch("fromLat") !== 0 &&
-                  form.watch("toLat") && form.watch("toLat") !== 0 &&
-                  !(form.watch("fromPostcode") && (!form.watch("fromLat") || form.watch("fromLat") === 0)) &&
-                  !(form.watch("toPostcode") && (!form.watch("toLat") || form.watch("toLat") === 0))
+                  form.watch("toLat") && form.watch("toLat") !== 0
                     ? "default"
                     : "outline"
                 }
