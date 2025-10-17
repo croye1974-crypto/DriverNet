@@ -108,6 +108,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   const [gettingToLocation, setGettingToLocation] = useState(false);
   const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
   const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
+  const [manualStartTime, setManualStartTime] = useState(false);
 
   // Find the last job in the schedule (sorted by estimated start time)
   const lastJob = existingJobs.length > 0 
@@ -118,7 +119,19 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     lastJob?.estimatedEndTime ? String(lastJob.estimatedEndTime) : undefined,
     scheduleDate
   );
-  const defaultTimes = getDefaultTimes(scheduleDate);
+  
+  // Calculate default start time based on last job or current time
+  const getInitialStartTime = () => {
+    if (lastJob?.estimatedEndTime) {
+      const lastEndTime = new Date(lastJob.estimatedEndTime);
+      // Add 15 minutes buffer after last job
+      lastEndTime.setMinutes(lastEndTime.getMinutes() + 15);
+      const hours = String(lastEndTime.getHours()).padStart(2, '0');
+      const minutes = String(lastEndTime.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    return getDefaultTimes(scheduleDate).start;
+  };
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -131,17 +144,17 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       toLocation: "",
       toLat: 0,
       toLng: 0,
-      estimatedStartTime: defaultTimes.start,
-      estimatedEndTime: defaultTimes.end,
+      estimatedStartTime: getInitialStartTime(),
+      estimatedEndTime: "",
     },
   });
 
   // Reset times when dialog opens
   useEffect(() => {
     if (open) {
-      const times = getDefaultTimes(scheduleDate);
-      form.setValue("estimatedStartTime", times.start);
-      form.setValue("estimatedEndTime", times.end);
+      setManualStartTime(false);
+      form.setValue("estimatedStartTime", getInitialStartTime());
+      form.setValue("estimatedEndTime", "");
     }
   }, [open, scheduleDate, form]);
 
@@ -180,6 +193,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     const formattedEnd = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
     
     form.setValue("estimatedEndTime", formattedEnd);
+    setManualStartTime(false); // Reset after calculation
     
     toast({
       title: "Journey Calculated",
@@ -592,6 +606,11 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                         <Input
                           type="time"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setManualStartTime(true);
+                            form.setValue("estimatedEndTime", "");
+                          }}
                           data-testid="input-start-time"
                         />
                       </FormControl>
@@ -610,6 +629,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                         <Input
                           type="time"
                           {...field}
+                          disabled={manualStartTime}
                           data-testid="input-end-time"
                         />
                       </FormControl>
@@ -621,7 +641,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
 
               <Button
                 type="button"
-                variant="outline"
+                variant={manualStartTime ? "default" : "outline"}
                 onClick={handleCalculateJourney}
                 className="w-full"
                 data-testid="button-calculate-journey"
@@ -637,9 +657,9 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 variant="outline"
                 onClick={() => {
                   form.reset();
-                  const times = getDefaultTimes(scheduleDate);
-                  form.setValue("estimatedStartTime", times.start);
-                  form.setValue("estimatedEndTime", times.end);
+                  setManualStartTime(false);
+                  form.setValue("estimatedStartTime", getInitialStartTime());
+                  form.setValue("estimatedEndTime", "");
                 }}
                 className="flex-1"
                 data-testid="button-reset-job"
@@ -648,7 +668,13 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
               </Button>
               <Button
                 type="submit"
-                disabled={createJob.isPending}
+                disabled={
+                  createJob.isPending ||
+                  !form.watch("fromLocation") ||
+                  !form.watch("toLocation") ||
+                  !form.watch("estimatedStartTime") ||
+                  !form.watch("estimatedEndTime")
+                }
                 className="flex-1"
                 data-testid="button-submit-job"
               >
