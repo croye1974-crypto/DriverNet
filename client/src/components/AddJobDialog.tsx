@@ -34,6 +34,18 @@ const createJobFormSchema = (lastJobEndTime?: string, scheduleDate?: string) => 
   estimatedStartTime: z.string().min(1, "Start time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
   estimatedEndTime: z.string().min(1, "End time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
 }).refine((data) => {
+  // Validate that pickup coordinates are set
+  return data.fromLat !== 0 && data.fromLng !== 0;
+}, {
+  message: "Please click the Search button next to postcode or use GPS to set pickup location",
+  path: ["fromLat"],
+}).refine((data) => {
+  // Validate that delivery coordinates are set
+  return data.toLat !== 0 && data.toLng !== 0;
+}, {
+  message: "Please click the Search button next to postcode or use GPS to set delivery location",
+  path: ["toLat"],
+}).refine((data) => {
   // Validate that end time is after start time
   // Note: We allow cross-midnight jobs (end time can be "earlier" if it's next day)
   const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
@@ -114,7 +126,10 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     ? [...existingJobs].sort((a, b) => new Date(a.estimatedStartTime).getTime() - new Date(b.estimatedStartTime).getTime())[existingJobs.length - 1]
     : null;
 
-  const jobFormSchema = createJobFormSchema(lastJob?.estimatedEndTime, scheduleDate);
+  const jobFormSchema = createJobFormSchema(
+    lastJob?.estimatedEndTime ? String(lastJob.estimatedEndTime) : undefined,
+    scheduleDate
+  );
   const defaultTimes = getDefaultTimes(scheduleDate);
 
   const form = useForm<JobFormValues>({
@@ -634,11 +649,16 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  form.reset();
+                  const times = getDefaultTimes(scheduleDate);
+                  form.setValue("estimatedStartTime", times.start);
+                  form.setValue("estimatedEndTime", times.end);
+                }}
                 className="flex-1"
-                data-testid="button-cancel-job"
+                data-testid="button-reset-job"
               >
-                Cancel
+                Reset
               </Button>
               <Button
                 type="submit"
