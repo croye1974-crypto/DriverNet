@@ -11,6 +11,7 @@ import { MapPin, Loader2, Search, Navigation } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { estimateJourneyTime, formatDuration, formatDistance, calculateDistance } from "@/lib/journey";
+import { wordsToCoordinates, isValidWhat3WordsFormat, cleanWhat3Words } from "@/lib/what3words";
 import type { Job } from "@shared/schema";
 
 interface AddJobDialogProps {
@@ -108,6 +109,10 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   const [gettingToLocation, setGettingToLocation] = useState(false);
   const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
   const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
+  const [lookingUpFromW3W, setLookingUpFromW3W] = useState(false);
+  const [lookingUpToW3W, setLookingUpToW3W] = useState(false);
+  const [fromW3W, setFromW3W] = useState("");
+  const [toW3W, setToW3W] = useState("");
   const [manualStartTime, setManualStartTime] = useState(false);
 
   // Find the last job in the schedule (sorted by estimated start time)
@@ -248,6 +253,52 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       });
     },
   });
+
+  const lookupWhat3Words = async (field: "from" | "to") => {
+    const setter = field === "from" ? setLookingUpFromW3W : setLookingUpToW3W;
+    const words = field === "from" ? fromW3W : toW3W;
+    
+    const cleanWords = cleanWhat3Words(words);
+    
+    if (!cleanWords || !isValidWhat3WordsFormat(cleanWords)) {
+      toast({
+        title: "Invalid What3Words Address",
+        description: "Please enter a valid 3-word address (e.g., index.home.raft)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setter(true);
+    
+    try {
+      const result = await wordsToCoordinates(cleanWords);
+      
+      if (!result) {
+        throw new Error("What3Words address not found");
+      }
+
+      if (field === "from") {
+        form.setValue("fromLat", result.lat);
+        form.setValue("fromLng", result.lng);
+        form.setValue("fromLocation", `///${cleanWords}`);
+        setFromW3W("");
+      } else {
+        form.setValue("toLat", result.lat);
+        form.setValue("toLng", result.lng);
+        form.setValue("toLocation", `///${cleanWords}`);
+        setToW3W("");
+      }
+    } catch (error) {
+      toast({
+        title: "What3Words Lookup Failed",
+        description: error instanceof Error ? error.message : "Could not find address. Please check and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setter(false);
+    }
+  };
 
   const lookupPostcode = async (field: "from" | "to") => {
     const setter = field === "from" ? setLookingUpFromPostcode : setLookingUpToPostcode;
@@ -416,6 +467,42 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 </div>
               </div>
 
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <FormLabel>What3Words (Optional)</FormLabel>
+                  <Input
+                    placeholder="e.g., index.home.raft"
+                    value={fromW3W}
+                    onChange={(e) => {
+                      setFromW3W(e.target.value);
+                      form.setValue("fromLocation", "");
+                    }}
+                    spellCheck={false}
+                    data-testid="input-from-w3w"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant={
+                      fromW3W && 
+                      (!form.watch("fromLat") || form.watch("fromLat") === 0)
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => lookupWhat3Words("from")}
+                    disabled={lookingUpFromW3W}
+                    data-testid="button-lookup-from-w3w"
+                  >
+                    {lookingUpFromW3W ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="fromLocation"
@@ -513,6 +600,42 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                     data-testid="button-lookup-to-postcode"
                   >
                     {lookingUpToPostcode ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <FormLabel>What3Words (Optional)</FormLabel>
+                  <Input
+                    placeholder="e.g., filled.count.soap"
+                    value={toW3W}
+                    onChange={(e) => {
+                      setToW3W(e.target.value);
+                      form.setValue("toLocation", "");
+                    }}
+                    spellCheck={false}
+                    data-testid="input-to-w3w"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant={
+                      toW3W && 
+                      (!form.watch("toLat") || form.watch("toLat") === 0)
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => lookupWhat3Words("to")}
+                    disabled={lookingUpToW3W}
+                    data-testid="button-lookup-to-w3w"
+                  >
+                    {lookingUpToW3W ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Search className="h-4 w-4" />
