@@ -236,10 +236,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs/schedule", scheduleId] });
-      toast({
-        title: "Job Added",
-        description: "Delivery job has been added to your schedule",
-      });
+      // No toast - job appears in list immediately, speeds up workflow
       form.reset();
       onOpenChange(false);
     },

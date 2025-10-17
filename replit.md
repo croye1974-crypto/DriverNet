@@ -114,3 +114,14 @@ The application features clear separation between frontend, backend, and shared 
 - Error Visibility: Toast notifications now appear above dialogs (z-index 10000) instead of hidden behind
 - Disabled States: Add Job button remains disabled and grey until all required fields complete
 - Impact: Clear, foolproof workflow that guides drivers step-by-step without confusion
+
+### Zero Confirmation Toasts (Implemented)
+- Feature: Removed ALL success confirmation toasts for maximum workflow speed
+- Removed Toasts:
+  1. "Postcode Found" - Visual feedback: Location name populates instantly
+  2. "Journey Calculated" - Visual feedback: End time populates instantly
+  3. "Job Added" - Visual feedback: Dialog closes, job appears in list instantly
+- Error Toasts Kept: All error states still show toasts (invalid postcode, lookup failed, etc.)
+- Visual Feedback System: Every action provides instant, clear visual feedback without interruption
+- Workflow Speed: Zero toast delays = Ultra-fast job entry for drivers adding multiple deliveries
+- Impact: Drivers can add jobs in seconds without any confirmation popups slowing them down
