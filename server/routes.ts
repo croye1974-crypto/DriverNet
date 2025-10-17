@@ -32,6 +32,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
+  // What3Words API endpoints
+  app.post("/api/what3words/coordinates-to-words", async (req, res) => {
+    try {
+      const { lat, lng } = req.body;
+      
+      if (!lat || !lng) {
+        return res.status(400).json({ error: "lat and lng are required" });
+      }
+
+      const apiKey = process.env.WHAT3WORDS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "What3Words API key not configured" });
+      }
+
+      const response = await fetch(
+        `https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat},${lng}&key=${apiKey}`
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        return res.status(response.status).json({ error: error.error?.message || "What3Words API error" });
+      }
+
+      const data = await response.json();
+      res.json({
+        words: data.words,
+        nearestPlace: data.nearestPlace,
+        coordinates: data.coordinates,
+      });
+    } catch (error) {
+      console.error("What3Words coordinates-to-words error:", error);
+      res.status(500).json({ error: "Failed to convert coordinates to words" });
+    }
+  });
+
+  app.post("/api/what3words/words-to-coordinates", async (req, res) => {
+    try {
+      const { words } = req.body;
+      
+      if (!words) {
+        return res.status(400).json({ error: "words is required" });
+      }
+
+      const apiKey = process.env.WHAT3WORDS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "What3Words API key not configured" });
+      }
+
+      const response = await fetch(
+        `https://api.what3words.com/v3/convert-to-coordinates?words=${encodeURIComponent(words)}&key=${apiKey}`
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        return res.status(response.status).json({ error: error.error?.message || "What3Words API error" });
+      }
+
+      const data = await response.json();
+      res.json({
+        words: data.words,
+        coordinates: data.coordinates,
+        nearestPlace: data.nearestPlace,
+      });
+    } catch (error) {
+      console.error("What3Words words-to-coordinates error:", error);
+      res.status(500).json({ error: "Failed to convert words to coordinates" });
+    }
+  });
+
   // Seed demo data endpoint (for marketing/testing)
   // Create messages for current user with demo users
   app.post("/api/seed-user-messages", async (req, res) => {
