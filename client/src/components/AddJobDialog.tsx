@@ -293,11 +293,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
           form.setValue("toLng", result.longitude);
           form.setValue("toLocation", fullAddress);
         }
-
-        toast({
-          title: "Postcode Found",
-          description: `Location set to ${fullAddress}`,
-        });
+        
+        // No toast - location name shows success, speeds up workflow
       } else {
         throw new Error("Invalid postcode data");
       }
