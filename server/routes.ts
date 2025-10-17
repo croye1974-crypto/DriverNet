@@ -32,6 +32,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
+  // Seed demo data endpoint (for marketing/testing)
+  app.post("/api/seed-demo-data", async (req, res) => {
+    try {
+      const bcrypt = await import("bcrypt");
+      const hashedPassword = await bcrypt.hash("demo1234", 10);
+      
+      // North East England cities
+      const cities = [
+        { name: "Newcastle upon Tyne", lat: 54.9783, lng: -1.6178 },
+        { name: "Durham", lat: 54.7761, lng: -1.5733 },
+        { name: "Sunderland", lat: 54.9069, lng: -1.3838 },
+        { name: "Middlesbrough", lat: 54.5742, lng: -1.2350 },
+        { name: "Darlington", lat: 54.5268, lng: -1.5528 },
+        { name: "Gateshead", lat: 54.9526, lng: -1.6043 },
+        { name: "South Shields", lat: 55.0066, lng: -1.4322 },
+        { name: "Hartlepool", lat: 54.6917, lng: -1.2125 },
+        { name: "Stockton-on-Tees", lat: 54.5697, lng: -1.3184 },
+        { name: "Washington", lat: 54.9000, lng: -1.5167 },
+      ];
+
+      const firstNames = ["James", "John", "Robert", "Michael", "William", "David", "Richard"];
+      const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis"];
+      
+      const createdUsers: any[] = [];
+      
+      // Create 100 users
+      for (let i = 0; i < 100; i++) {
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const callSign = `${letters[Math.floor(Math.random() * 26)]}${letters[Math.floor(Math.random() * 26)]}${Math.floor(1000 + Math.random() * 9000)}`;
+        const name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+        
+        const user = await storage.createUser({
+          username: `demo_${callSign.toLowerCase()}`,
+          password: hashedPassword,
+          name,
+        } as any); // Using 'as any' since storage.createUser handles callSign generation internally
+        createdUsers.push(user);
+      }
+
+      // Create lift offers and requests
+      for (const user of createdUsers) {
+        const city = cities[Math.floor(Math.random() * cities.length)];
+        const destCity = cities[Math.floor(Math.random() * cities.length)];
+        const latOffset = (Math.random() - 0.5) * 0.14;
+        const lngOffset = (Math.random() - 0.5) * 0.14;
+        
+        const isOffer = Math.random() < 0.6;
+        const now = new Date();
+        const futureTime = new Date(now.getTime() + Math.random() * 24 * 60 * 60 * 1000);
+
+        if (isOffer) {
+          await storage.createLiftOffer({
+            driverId: user.id,
+            fromLocation: city.name,
+            fromLat: city.lat + latOffset,
+            fromLng: city.lng + lngOffset,
+            toLocation: destCity.name,
+            toLat: destCity.lat + latOffset,
+            toLng: destCity.lng + lngOffset,
+            departureTime: futureTime,
+            availableSeats: Math.floor(1 + Math.random() * 3),
+            status: "available",
+            notes: "Happy to share the journey!",
+          });
+        } else {
+          await storage.createLiftRequest({
+            requesterId: user.id,
+            fromLocation: city.name,
+            fromLat: city.lat + latOffset,
+            fromLng: city.lng + lngOffset,
+            toLocation: destCity.name,
+            toLat: destCity.lat + latOffset,
+            toLng: destCity.lng + lngOffset,
+            requestedTime: futureTime,
+            notes: "Looking for a lift!",
+          });
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Created ${createdUsers.length} demo users with lift offers/requests`,
+        usersCreated: createdUsers.length
+      });
+    } catch (error) {
+      console.error("Seed demo data error:", error);
+      res.status(500).json({ error: "Failed to seed demo data" });
+    }
+  });
+
   app.post("/api/schedules", async (req, res) => {
     try {
       const validatedData = insertScheduleSchema.parse(req.body);
