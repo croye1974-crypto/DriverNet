@@ -33,6 +33,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Seed demo data endpoint (for marketing/testing)
+  // Create messages for current user with demo users
+  app.post("/api/seed-user-messages", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      const cities = [
+        { name: "Newcastle" },
+        { name: "Durham" },
+        { name: "Sunderland" },
+        { name: "Middlesbrough" },
+        { name: "Darlington" },
+      ];
+
+      const messageTemplates = [
+        "Hey! Are you heading to {location} today?",
+        "I saw your lift offer - still available?",
+        "Perfect timing! I need a lift to {location}",
+        "Thanks for the lift yesterday, really appreciated it!",
+        "Can we meet at the usual spot?",
+        "Running 10 mins late, is that ok?",
+        "Are you free for a lift to {location} tomorrow?",
+        "Great riding with you today!",
+        "What time are you leaving for {location}?",
+        "I can offer a return lift if needed",
+        "Cheers for the ride mate!",
+        "Still doing the {location} run this week?",
+        "Need a lift urgently - you available?",
+        "Let me know when you're ready to go",
+        "See you at the pickup point!",
+      ];
+
+      // Get all demo users
+      const allUsers = await storage.getAllUsers();
+      const demoUsers = allUsers.filter(u => u.username?.startsWith("demo_"));
+
+      if (demoUsers.length === 0) {
+        return res.status(400).json({ error: "No demo users found. Run /api/seed-demo-data first" });
+      }
+
+      // Create 15 messages: some sent by user, some received by user
+      let messagesCreated = 0;
+      for (let i = 0; i < 15; i++) {
+        const demoUser = demoUsers[Math.floor(Math.random() * demoUsers.length)];
+        const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
+        const location = cities[Math.floor(Math.random() * cities.length)].name;
+        const content = template.replace("{location}", location);
+        
+        // Alternate between sending and receiving
+        const isSentByUser = i % 2 === 0;
+        
+        await storage.createMessage({
+          senderId: isSentByUser ? userId : demoUser.id,
+          receiverId: isSentByUser ? demoUser.id : userId,
+          content,
+        });
+        messagesCreated++;
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Created ${messagesCreated} messages for user`,
+        messagesCreated
+      });
+    } catch (error) {
+      console.error("Seed user messages error:", error);
+      res.status(500).json({ error: "Failed to seed user messages" });
+    }
+  });
+
   app.post("/api/seed-demo-data", async (req, res) => {
     try {
       const bcrypt = await import("bcrypt");
@@ -144,11 +217,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Also create messages for user-1 with demo users
+      let userMessagesCreated = 0;
+      const user1 = await storage.getUser("user-1");
+      if (user1 && createdUsers.length > 0) {
+        const userMessageTemplates = [
+          "Hey! Are you heading to {location} today?",
+          "I saw your lift offer - still available?",
+          "Perfect timing! I need a lift to {location}",
+          "Thanks for the lift yesterday!",
+          "Can we meet at the usual spot?",
+          "Running 10 mins late, is that ok?",
+          "Are you free for a lift to {location} tomorrow?",
+          "Great riding with you today!",
+          "What time are you leaving for {location}?",
+          "I can offer a return lift if needed",
+        ];
+
+        for (let i = 0; i < 15; i++) {
+          const demoUser = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+          const template = userMessageTemplates[Math.floor(Math.random() * userMessageTemplates.length)];
+          const location = cities[Math.floor(Math.random() * cities.length)].name;
+          const content = template.replace("{location}", location);
+          
+          // Alternate between sending and receiving
+          const isSentByUser = i % 2 === 0;
+          
+          await storage.createMessage({
+            senderId: isSentByUser ? "user-1" : demoUser.id,
+            receiverId: isSentByUser ? demoUser.id : "user-1",
+            content,
+          });
+          userMessagesCreated++;
+        }
+      }
+
       res.json({ 
         success: true, 
-        message: `Created ${createdUsers.length} demo users, 100 lift offers/requests, and ${messagesCreated} messages`,
+        message: `Created ${createdUsers.length} demo users, 100 lift offers/requests, ${messagesCreated} demo messages, and ${userMessagesCreated} messages for your account`,
         usersCreated: createdUsers.length,
-        messagesCreated
+        messagesCreated,
+        userMessagesCreated
       });
     } catch (error) {
       console.error("Seed demo data error:", error);
