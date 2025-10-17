@@ -361,10 +361,6 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Delivery Job</DialogTitle>
-        </DialogHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-3">
