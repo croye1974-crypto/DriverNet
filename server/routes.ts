@@ -37,8 +37,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { lat, lng } = req.body;
       
-      if (!lat || !lng) {
+      if (lat === undefined || lat === null || lng === undefined || lng === null) {
         return res.status(400).json({ error: "lat and lng are required" });
+      }
+      
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+        return res.status(400).json({ error: "lat and lng must be numbers" });
+      }
+      
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({ error: "Invalid coordinates: lat must be between -90 and 90, lng must be between -180 and 180" });
       }
 
       const apiKey = process.env.WHAT3WORDS_API_KEY;
