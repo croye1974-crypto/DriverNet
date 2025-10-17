@@ -195,10 +195,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     form.setValue("estimatedEndTime", formattedEnd);
     setManualStartTime(false); // Reset after calculation
     
-    toast({
-      title: "Journey Calculated",
-      description: `${formatDistance(calculateDistance(fromLat, fromLng, toLat, toLng))} • ${formatDuration(journeyMinutes)} journey`,
-    });
+    // No toast - end time populating is sufficient feedback, speeds up workflow
   };
 
   const createJob = useMutation({
