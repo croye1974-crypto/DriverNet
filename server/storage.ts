@@ -763,7 +763,7 @@ export class MemStorage implements IStorage {
       const otherUser = this.users.get(otherUserId);
       return {
         userId: otherUserId,
-        name: otherUser?.name || "Unknown User",
+        name: otherUser?.callSign || otherUser?.name || "Unknown User",
         lastMessage: data.lastMessage.content,
         timestamp: data.lastMessage.createdAt ? data.lastMessage.createdAt.toISOString() : "",
         unreadCount: data.unreadCount,
@@ -792,7 +792,7 @@ export class MemStorage implements IStorage {
 
     // Create a system message in their conversation thread
     // This appears in user1's conversation with user2 and vice versa
-    const messageContent = `Schedule Match! Your route matches ${user2.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
+    const messageContent = `Schedule Match! Your route matches ${user2.callSign}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
     
     // Message in user1's view (appears to come from user2 to encourage conversation)
     const message1: Message = {
@@ -805,7 +805,7 @@ export class MemStorage implements IStorage {
     };
     
     // Message in user2's view (appears to come from user1 to encourage conversation)  
-    const messageContent2 = `Schedule Match! Your route matches ${user1.name}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
+    const messageContent2 = `Schedule Match! Your route matches ${user1.callSign}'s schedule. You'll both be near ${location} around ${time} (within ${distanceText}). Contact them to discuss pickup arrangements.`;
     
     const message2: Message = {
       id: randomUUID(),
