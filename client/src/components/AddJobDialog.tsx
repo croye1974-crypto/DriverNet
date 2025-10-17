@@ -543,27 +543,6 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 )}
               />
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => getCurrentLocation("to")}
-                disabled={gettingToLocation}
-                className="w-full"
-                data-testid="button-get-to-location"
-              >
-                {gettingToLocation ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Getting Location...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Use Current Location
-                  </>
-                )}
-              </Button>
-
               <FormField
                 control={form.control}
                 name="toLat"
@@ -600,6 +579,27 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                   </span>
                 </div>
               )}
+
+              {/* Calculate Journey Button - placed here after delivery location */}
+              <Button
+                type="button"
+                variant={
+                  // Only blue if manual time set, has coordinates, and no search buttons are waiting
+                  manualStartTime &&
+                  form.watch("fromLat") && form.watch("fromLat") !== 0 &&
+                  form.watch("toLat") && form.watch("toLat") !== 0 &&
+                  !(form.watch("fromPostcode") && (!form.watch("fromLat") || form.watch("fromLat") === 0)) &&
+                  !(form.watch("toPostcode") && (!form.watch("toLat") || form.watch("toLat") === 0))
+                    ? "default"
+                    : "outline"
+                }
+                onClick={handleCalculateJourney}
+                className="w-full"
+                data-testid="button-calculate-journey"
+              >
+                <Navigation className="h-4 w-4 mr-2" />
+                Calculate Journey
+              </Button>
             </div>
 
             <div className="space-y-3">
@@ -648,26 +648,6 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                   )}
                 />
               </div>
-
-              <Button
-                type="button"
-                variant={
-                  // Only blue if manual time set, has coordinates, and no search buttons are waiting
-                  manualStartTime &&
-                  form.watch("fromLat") && form.watch("fromLat") !== 0 &&
-                  form.watch("toLat") && form.watch("toLat") !== 0 &&
-                  !(form.watch("fromPostcode") && (!form.watch("fromLat") || form.watch("fromLat") === 0)) &&
-                  !(form.watch("toPostcode") && (!form.watch("toLat") || form.watch("toLat") === 0))
-                    ? "default"
-                    : "outline"
-                }
-                onClick={handleCalculateJourney}
-                className="w-full"
-                data-testid="button-calculate-journey"
-              >
-                <Navigation className="h-4 w-4 mr-2" />
-                Calculate Journey
-              </Button>
             </div>
 
             <div className="flex gap-2 pt-4">
