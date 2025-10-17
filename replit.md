@@ -136,3 +136,15 @@ The application features clear separation between frontend, backend, and shared 
   3. Click Calculate Journey → End time fills, button returns to grey
   4. Change start time again → Calculate Journey turns BLUE again (repeatable)
 - Impact: Drivers can now easily recalculate journey times when adjusting schedules
+
+### Demo Data for Marketing (Implemented)
+- Created seed script: `scripts/seed-demo-drivers.ts`
+- Generates 100 demo drivers across North East England:
+  - Valid call signs in LL#### format (e.g., JH5447, GO2223, IA5563)
+  - Realistic names (first + last name combinations)
+  - Spread across 10 cities: Newcastle, Durham, Sunderland, Middlesbrough, Darlington, Gateshead, South Shields, Hartlepool, Stockton-on-Tees, Washington
+  - 60% lift offers (blue markers), 40% lift requests (green markers)
+  - 50 believable messages between drivers (about lifts, meetups, coordination)
+- All demo users: password `demo1234`, username format `demo_{callsign}`
+- Run with: `tsx scripts/seed-demo-drivers.ts`
+- Note: In-memory data only (clears on server restart)

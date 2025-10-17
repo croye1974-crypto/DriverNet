@@ -162,12 +162,80 @@ async function seedDemoDrivers() {
     }
   }
 
+  console.log("\n✨ Demo lifts created!");
+  console.log("\n💬 Creating believable messages between drivers...");
+
+  // Message templates
+  const messageTemplates = [
+    "Hi! I saw you're heading to {city} tomorrow. Any chance of a lift? Happy to chip in for petrol!",
+    "Thanks for the lift yesterday! Really appreciated it mate 👍",
+    "Are you still offering that ride to {city}? I'd be interested if there's space",
+    "Hi {name}, I'm going to pick up from {city} on Tuesday. Want to share the journey?",
+    "Morning! I see we're both heading to {city} around the same time. Fancy meeting up for the journey?",
+    "Cheers for accepting my lift request! What time works best for you?",
+    "Hi there, I noticed you're often around {city}. I deliver there regularly too - maybe we could coordinate sometime?",
+    "Thanks again for yesterday's lift. Let me know if you ever need a return favour!",
+    "Morning {name}! Are you still available for that lift to {city} this afternoon?",
+    "Hi, I'm new to the DriveNet community. Thanks for the lift offer - really helpful!",
+    "Perfect timing on that lift offer! I'll meet you at the usual spot?",
+    "Appreciate the message mate. Yeah I can do {city} on Thursday if that helps?",
+    "Hi! Regular route from {city} to {city2} every week. Always happy to share - saves us both some hassle!",
+    "Thanks for being so reliable with the lifts. Makes the job so much easier!",
+    "Morning! I've got a delivery near {city} today. If you need a lift back let me know",
+    "Cheers {name}! See you at the services at 10am then?",
+    "That lift yesterday was spot on timing. Thanks again!",
+    "Hi, I'm heading to {city} tomorrow morning. Room for one more if you're interested?",
+    "Perfect! I'll be there at 2pm. Thanks for sorting this",
+    "Morning mate! Still on for that {city} run this afternoon?",
+  ];
+
+  const cities = neEnglandCities.map(c => c.name);
+  
+  // Create 50 realistic message exchanges
+  for (let i = 0; i < 50; i++) {
+    // Pick two random different users
+    const sender = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+    let receiver = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+    
+    // Make sure they're different users
+    while (receiver.id === sender.id) {
+      receiver = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+    }
+
+    // Pick a random message template and customize it
+    let template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
+    
+    // Get sender name for personalization
+    const senderUser = await storage.getUser(sender.id);
+    const receiverUser = await storage.getUser(receiver.id);
+    
+    const message = template
+      .replace('{city}', randomCity)
+      .replace('{city2}', randomCity2)
+      .replace('{name}', receiverUser?.name.split(' ')[0] || 'there');
+
+    try {
+      await storage.createMessage({
+        senderId: sender.id,
+        receiverId: receiver.id,
+        content: message,
+        read: Math.random() > 0.3, // 70% read, 30% unread for realism
+      });
+      console.log(`💬 ${sender.callSign} → ${receiver.callSign}: "${message.substring(0, 40)}..."`);
+    } catch (error) {
+      console.error(`❌ Failed to create message:`, error);
+    }
+  }
+
   console.log("\n✨ Demo driver seeding complete!");
   console.log(`📊 Summary:`);
   console.log(`   - ${createdUsers.length} demo users created`);
   console.log(`   - All with call signs in LL#### format`);
   console.log(`   - Spread across North East England`);
   console.log(`   - Mix of lift offers (blue markers) and requests (green markers)`);
+  console.log(`   - 50 realistic messages between drivers`);
   console.log(`\n🔐 All demo users have password: demo1234`);
   console.log(`📝 Username format: demo_{callsign} (e.g., demo_ab1234)`);
 }
