@@ -34,18 +34,6 @@ const createJobFormSchema = (lastJobEndTime?: string, scheduleDate?: string) => 
   estimatedStartTime: z.string().min(1, "Start time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
   estimatedEndTime: z.string().min(1, "End time is required").regex(/^\d{2}:\d{2}$/, "Invalid time format"),
 }).refine((data) => {
-  // Validate that pickup coordinates are set
-  return data.fromLat !== 0 && data.fromLng !== 0;
-}, {
-  message: "Please click the Search button next to postcode or use GPS to set pickup location",
-  path: ["fromLat"],
-}).refine((data) => {
-  // Validate that delivery coordinates are set
-  return data.toLat !== 0 && data.toLng !== 0;
-}, {
-  message: "Please click the Search button next to postcode or use GPS to set delivery location",
-  path: ["toLat"],
-}).refine((data) => {
   // Validate that end time is after start time
   // Note: We allow cross-midnight jobs (end time can be "earlier" if it's next day)
   const [startHour, startMin] = data.estimatedStartTime.split(':').map(Number);
@@ -163,8 +151,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     
     if (!fromLat || !fromLng || !toLat || !toLng || fromLat === 0 || fromLng === 0 || toLat === 0 || toLng === 0) {
       toast({
-        title: "Missing Locations",
-        description: "Please set both pickup and delivery locations first",
+        title: "GPS Coordinates Needed",
+        description: "To calculate journey time, use postcode lookup (🔍) or GPS location for both locations",
         variant: "destructive",
       });
       return;

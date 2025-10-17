@@ -87,3 +87,15 @@ The application features clear separation between frontend, backend, and shared 
 - Validation: Email format checked, phone minimum length enforced, empty strings handled as null
 - UI/UX: Displays "Not provided" for missing contact details, maintains consistent design patterns
 - Impact: Drivers can now provide complete contact information for better communication and coordination
+
+### Flexible Job Location Input (Implemented)
+- Feature: Add jobs using town/city names without requiring GPS coordinates or postcode lookup
+- Input Options: Three flexible ways to set locations:
+  1. Town/City Name: Type "Manchester", "Liverpool", etc. (no coordinates needed)
+  2. Postcode Lookup: Enter postcode + click Search button (🔍) for precise coordinates
+  3. GPS Location: Click "Use Current Location" for exact GPS coordinates
+- Journey Calculation: Optional feature requiring GPS coordinates (via postcode or GPS)
+- Validation: Removed mandatory coordinate requirement; locations can be text-only
+- UI Updates: Clear messaging when GPS needed for journey calculation
+- Reset Button: Easily clear form and start over with Reset button
+- Impact: Faster job entry for drivers who know general destinations without needing exact postcodes
