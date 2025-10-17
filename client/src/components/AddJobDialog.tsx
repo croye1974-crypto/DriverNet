@@ -476,7 +476,13 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
               />
             </div>
 
-            <div className="space-y-3">
+            <div 
+              className={`space-y-3 p-3 rounded-md transition-colors ${
+                form.watch("fromLocation") && !form.watch("toLocation")
+                  ? "bg-blue-50 dark:bg-blue-950/20"
+                  : ""
+              }`}
+            >
               <h3 className="text-sm font-semibold">Delivery Location</h3>
               
               <div className="flex gap-2">
