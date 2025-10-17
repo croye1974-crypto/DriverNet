@@ -111,10 +111,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Create 50 demo messages between random users
+      const messageTemplates = [
+        "Hey, I saw your lift offer. Are you still available?",
+        "Perfect timing! I need a lift to {location}",
+        "Thanks for the lift yesterday, really appreciated it!",
+        "Can you pick me up from the usual spot?",
+        "Running 10 mins late, still ok?",
+        "Great ride today, cheers!",
+        "Are you heading to {location} tomorrow?",
+        "I can offer a lift back if you need one",
+        "What time are you leaving?",
+        "Sounds good, see you there!",
+      ];
+
+      let messagesCreated = 0;
+      for (let i = 0; i < 50; i++) {
+        const user1 = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+        const user2 = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+        
+        if (user1.id !== user2.id) {
+          const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
+          const location = cities[Math.floor(Math.random() * cities.length)].name;
+          const content = template.replace("{location}", location);
+          
+          await storage.createMessage({
+            senderId: user1.id,
+            receiverId: user2.id,
+            content,
+          });
+          messagesCreated++;
+        }
+      }
+
       res.json({ 
         success: true, 
-        message: `Created ${createdUsers.length} demo users with lift offers/requests`,
-        usersCreated: createdUsers.length
+        message: `Created ${createdUsers.length} demo users, 100 lift offers/requests, and ${messagesCreated} messages`,
+        usersCreated: createdUsers.length,
+        messagesCreated
       });
     } catch (error) {
       console.error("Seed demo data error:", error);
