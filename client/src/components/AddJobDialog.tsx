@@ -206,46 +206,69 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   };
 
   const handleCalculateJourney = () => {
-    const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = form.getValues();
-    
-    if (!fromLat || !fromLng || !toLat || !toLng || fromLat === 0 || fromLng === 0 || toLat === 0 || toLng === 0) {
-      toast({
-        title: "GPS Coordinates Needed",
-        description: "To calculate journey time, use postcode lookup (🔍) or GPS location for both locations",
-        variant: "destructive",
-      });
-      return;
-    }
+    try {
+      const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = form.getValues();
+      
+      if (!fromLat || !fromLng || !toLat || !toLng || fromLat === 0 || fromLng === 0 || toLat === 0 || toLng === 0) {
+        toast({
+          title: "GPS Coordinates Needed",
+          description: "To calculate journey time, use postcode lookup (🔍) or GPS location for both locations",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!estimatedStartTime) {
+      if (!estimatedStartTime) {
+        toast({
+          title: "Missing Start Time",
+          description: "Please set the start time first",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check if user has dismissed the inspection info message
+      let hideInspectionInfo = false;
+      try {
+        hideInspectionInfo = localStorage.getItem("hideInspectionInfo") === "true";
+      } catch (e) {
+        console.warn("Could not access localStorage:", e);
+      }
+      
+      if (hideInspectionInfo) {
+        // User has dismissed it before, proceed directly
+        performCalculation();
+      } else {
+        // Show the info dialog first
+        setShowInspectionInfo(true);
+      }
+    } catch (error) {
+      console.error("Error in handleCalculateJourney:", error);
       toast({
-        title: "Missing Start Time",
-        description: "Please set the start time first",
+        title: "Calculation Error",
+        description: "Could not start journey calculation. Please try again.",
         variant: "destructive",
       });
-      return;
-    }
-    
-    // Check if user has dismissed the inspection info message
-    const hideInspectionInfo = localStorage.getItem("hideInspectionInfo") === "true";
-    
-    if (hideInspectionInfo) {
-      // User has dismissed it before, proceed directly
-      performCalculation();
-    } else {
-      // Show the info dialog first
-      setShowInspectionInfo(true);
     }
   };
 
   const handleInspectionInfoClose = () => {
-    // Save preference immediately before any state changes
-    if (dontShowAgain) {
-      localStorage.setItem("hideInspectionInfo", "true");
+    try {
+      // Save preference immediately before any state changes
+      if (dontShowAgain) {
+        localStorage.setItem("hideInspectionInfo", "true");
+      }
+      setShowInspectionInfo(false);
+      setDontShowAgain(false);
+      performCalculation();
+    } catch (error) {
+      console.error("Error in handleInspectionInfoClose:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
-    setShowInspectionInfo(false);
-    setDontShowAgain(false);
-    performCalculation();
   };
 
   const createJob = useMutation({

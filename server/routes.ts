@@ -114,7 +114,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const coords = `${fromLng},${fromLat};${toLng},${toLat}`;
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coords}?access_token=${MAPBOX_API_KEY}&geometries=geojson&overview=full`;
 
-      const response = await fetch(url);
+      // Add timeout to prevent hanging requests (15 second timeout)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      let response;
+      try {
+        response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error("Mapbox API timeout");
+          return res.status(504).json({ error: "Journey calculation timed out. Please try again." });
+        }
+        throw fetchError;
+      }
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Mapbox API error:", errorText);
