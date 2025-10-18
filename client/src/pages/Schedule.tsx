@@ -277,26 +277,25 @@ export default function Schedule() {
           </div>
         )}
 
-        {!schedulesLoading && !schedulesFetching && !isLoading && !jobsError && sortedJobs.length === 0 && (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="text-center">
-              <p className="text-muted-foreground text-lg" data-testid="text-empty-schedule">No deliveries scheduled for this day</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Add your first delivery to get started
-              </p>
-            </div>
-          </div>
-        )}
-
-        {!schedulesLoading && !schedulesFetching && !isLoading && !jobsError && sortedJobs.length > 0 && (
+        {!schedulesLoading && !schedulesFetching && !isLoading && !jobsError && (
           <>
-            {/* Blue Section Header */}
-            <div className="bg-primary p-3 rounded-lg shadow-sm -mx-4 px-7">
-              <h2 className="text-primary-foreground font-semibold text-base">Today's Delivery Jobs ({sortedJobs.length})</h2>
+            {/* Blue Section Header - Always visible */}
+            <div className="sticky top-0 bg-primary text-primary-foreground px-4 py-3 font-semibold z-10" data-testid="section-header-jobs">
+              Today's Delivery Jobs
             </div>
             
-            <div className="space-y-2 mt-3">
-              {sortedJobs.map((job, index) => (
+            {sortedJobs.length === 0 ? (
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="text-center">
+                  <p className="text-muted-foreground text-lg" data-testid="text-empty-schedule">No deliveries scheduled for this day</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Add your first delivery to get started
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 mt-3 px-4">
+                {sortedJobs.map((job, index) => (
             <Card key={job.id} className="p-4" data-testid={`job-card-${job.id}`}>
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
@@ -395,8 +394,9 @@ export default function Schedule() {
                 </div>
               </div>
             </Card>
-          ))}
-            </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>

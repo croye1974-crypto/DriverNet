@@ -292,8 +292,8 @@ export default function FindLifts() {
 
           <TabsContent value="offers" className="flex-1 overflow-auto mt-0">
             {/* Blue Section Header */}
-            <div className="bg-primary p-3 sticky top-0 z-10 shadow-sm">
-              <h2 className="text-primary-foreground font-semibold text-base">Available Lift Offers</h2>
+            <div className="bg-primary text-primary-foreground p-3 sticky top-0 z-10 shadow-sm">
+              <h2 className="font-semibold text-base">Available Lift Offers</h2>
             </div>
             <div className="p-4 space-y-2">
               {mockDrivers.map((driver) => (
@@ -309,8 +309,8 @@ export default function FindLifts() {
 
           <TabsContent value="requests" className="flex-1 overflow-auto mt-0">
             {/* Red Section Header */}
-            <div className="bg-accent p-3 sticky top-0 z-10 shadow-sm">
-              <h2 className="text-accent-foreground font-semibold text-base">Lift Requests</h2>
+            <div className="bg-accent text-accent-foreground p-3 sticky top-0 z-10 shadow-sm">
+              <h2 className="font-semibold text-base">Lift Requests</h2>
             </div>
             <div className="p-4 space-y-2">
               {requestsLoading ? (

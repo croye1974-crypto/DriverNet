@@ -86,13 +86,17 @@ The architecture maintains clear separation between frontend, backend, and share
 
 ### Bold Red, White, Blue Design Update (October 2025)
 - **Design Overhaul**: Replaced muted grey aesthetic with high-contrast British color palette
-- **Color Scheme**:
+- **Color Scheme (WCAG AA Compliant)**:
   - Background: Soft blue-grey (214 32% 91%) for reduced eye strain
   - Cards: Pure white (0 0% 100%) for maximum contrast and readability
-  - Primary Actions: Vibrant British blue (217 91% 60%) for call-to-action buttons
-  - Accent/Destructive: Bold red (0 84% 60%) for highlights and warnings
+  - Primary Actions: Vibrant British blue (217 91% 48%) - ≥4.5:1 contrast with white text
+  - Accent/Destructive: Bold red (0 84% 48%) - ≥4.5:1 contrast with white text
   - Text: Deep navy (222 47% 11%) instead of black for softer appearance
 - **Visual Hierarchy**: Section headers with colored backgrounds (alternating blue/red) and white text
+  - FindLifts: Blue header for "Available Lift Offers", red header for "Lift Requests"
+  - Profile: Red badges for free tier and low punctuality warnings
+  - Schedule: Blue header for "Today's Delivery Jobs"
 - **Form Design**: White cards on colored backgrounds for strong contrast between sections
 - **Dark Mode**: Deep navy background (222 47% 11%) with blue-grey cards (217 33% 17%)
-- **Impact**: Eliminates "bland grey" appearance with professional, trustworthy British identity that improves usability and visual appeal
+- **Accessibility**: All colored backgrounds with white text meet WCAG AA 4.5:1 contrast requirement
+- **Impact**: Eliminates "bland grey" appearance with professional, trustworthy British identity that improves usability and visual appeal while maintaining accessibility standards
