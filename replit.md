@@ -23,7 +23,7 @@ The application prioritizes a native mobile app aesthetic with a light gray back
 - **Backend**: Express.js (TypeScript), in-memory storage (MemStorage) for MVP, RESTful endpoints with Zod validation.
 - **Shared**: Drizzle ORM schemas with Zod for type-safe contracts.
 - **Real-time Communication**: WebSocket integration for instant driver location updates and proactive notifications.
-- **Geolocation**: GPS tracking, Haversine formula for driver matching (within 10 miles), postcodes.io for UK postcode lookup, What3Words API for precise location sharing.
+- **Geolocation**: GPS tracking, Haversine formula for driver matching (within 10 miles), postcodes.io for UK postcode lookup.
 - **Mapping**: Interactive map with distinct markers, clickable elements, zoom/pan controls, and dynamic marker scaling.
 - **Scheduling**: Daily schedule management, job input, check-in/check-out with GPS, job status flow (Pending → In Progress → Completed), robust datetime validation.
 - **Messaging**: Full messaging system with real-time API integration.
@@ -34,7 +34,6 @@ The application prioritizes a native mobile app aesthetic with a light gray back
 - **Driver Identification**: Call sign system (LL#### format) for simplified driver identification.
 - **Spell Checking**: Dynamic spell checking for free-text location/place name inputs.
 - **Progressive Web App (PWA)**: Complete PWA manifest, service worker for offline support, iOS-specific meta tags, and mobile optimizations for safe areas and touch.
-- **What3Words Integration**: Secure server-side API integration for converting between coordinates and 3-word addresses, enabling precise location sharing.
 
 ### System Design Choices
 The application features clear separation between frontend, backend, and shared components. An in-memory database supports rapid MVP development. WebSockets provide real-time experiences. The design prioritizes mobile-first usability and accessibility.
@@ -47,7 +46,7 @@ The application features clear separation between frontend, backend, and shared 
 - **Icons**: `lucide-react`
 - **Form Management**: `react-hook-form`
 - **Mapping**: Leaflet
-- **External APIs**: postcodes.io, What3Words API
+- **External APIs**: postcodes.io
 - **Authentication**: `bcrypt`, `express-session`
 - **Payment Processing**: Stripe
 - **Testing**: Playwright
@@ -149,19 +148,6 @@ The application features clear separation between frontend, backend, and shared 
 - All demo users: password `demo1234`, username format `demo_{callsign}`
 - Run with: `tsx scripts/seed-demo-drivers.ts`
 - Note: In-memory data only (clears on server restart)
-
-### What3Words Integration (Implemented)
-- Feature: Precise location sharing using 3-word addresses (e.g., ///index.home.raft)
-- Backend Integration: Server-side API proxy for security (API key stored in WHAT3WORDS_API_KEY environment variable)
-- API Endpoints:
-  - POST `/api/what3words/convert-to-coordinates`: Converts 3-word address to coordinates
-  - POST `/api/what3words/convert-to-words`: Converts coordinates to 3-word address
-- Frontend Utilities: `client/src/lib/what3words.ts` provides helper functions for validation and conversion
-- Job Entry: What3Words input fields added alongside postcode and GPS options in AddJobDialog
-- Input Validation: Automatic format validation (word.word.word) with /// prefix support
-- Location Display: What3Words addresses stored with /// prefix in location fields
-- Blue Button Workflow: What3Words search buttons follow same progressive flow as postcode lookup
-- Impact: Drivers can share precise meetup locations (e.g., specific parking bay) without complex addresses
 
 ### AI Route Optimization (Implemented)
 - Feature: Intelligent route planning with driver density analysis and meet-up suggestions
