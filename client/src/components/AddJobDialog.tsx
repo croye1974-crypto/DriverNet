@@ -3,8 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -113,6 +112,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   const [manualStartTime, setManualStartTime] = useState(false);
   const [showInspectionInfo, setShowInspectionInfo] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [hasShownInspectionInfo, setHasShownInspectionInfo] = useState(false);
 
   // Find the last job in the schedule (sorted by estimated start time)
   const lastJob = existingJobs.length > 0 
@@ -227,7 +227,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
         return;
       }
       
-      // Check if user has dismissed the inspection info message
+      // Check if user has permanently dismissed the inspection info message
       let hideInspectionInfo = false;
       try {
         hideInspectionInfo = localStorage.getItem("hideInspectionInfo") === "true";
@@ -235,12 +235,13 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
         console.warn("Could not access localStorage:", e);
       }
       
-      if (hideInspectionInfo) {
-        // User has dismissed it before, proceed directly
+      // Skip dialog if: permanently hidden OR already shown in this dialog session
+      if (hideInspectionInfo || hasShownInspectionInfo) {
         performCalculation();
       } else {
-        // Show the info dialog first
+        // Show the info dialog (first time in this dialog session)
         setShowInspectionInfo(true);
+        setHasShownInspectionInfo(true);
       }
     } catch (error) {
       console.error("Error in handleCalculateJourney:", error);
@@ -311,6 +312,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       queryClient.invalidateQueries({ queryKey: ["/api/jobs/schedule", scheduleId] });
       // No toast - job appears in list immediately, speeds up workflow
       form.reset();
+      setHasShownInspectionInfo(false);
       onOpenChange(false);
     },
     onError: (error) => {
@@ -735,6 +737,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                 onClick={() => {
                   form.reset();
                   setManualStartTime(false);
+                  setHasShownInspectionInfo(false);
                   form.setValue("estimatedStartTime", getInitialStartTime());
                   form.setValue("estimatedEndTime", "");
                 }}
@@ -781,15 +784,19 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
         </Form>
       </DialogContent>
 
-      {/* Inspection Time Information Alert */}
-      <AlertDialog open={showInspectionInfo} onOpenChange={setShowInspectionInfo}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
+      {/* Inspection Time Information Dialog */}
+      <Dialog open={showInspectionInfo} onOpenChange={(open) => {
+        if (!open) {
+          handleInspectionInfoClose();
+        }
+      }}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-inspection-info">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
               Vehicle Inspection Time Included
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
+            </DialogTitle>
+            <DialogDescription asChild>
               <div className="space-y-3 text-base">
                 <p>
                   The journey time calculation automatically includes <strong>45 minutes</strong> for the mandatory vehicle inspection that occurs with every trade plate pickup.
@@ -812,15 +819,15 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                   </label>
                 </div>
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={handleInspectionInfoClose} data-testid="button-inspection-info-understood">
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={handleInspectionInfoClose} data-testid="button-inspection-info-understood">
               Understood
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
