@@ -130,16 +130,18 @@ async function seedDatabase() {
 }
 
 // Run seed if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  seedDatabase()
-    .then(() => {
-      console.log("\n✨ Seeding complete!");
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error("❌ Seeding failed:", error);
-      process.exit(1);
-    });
-}
+// DISABLED during deployment to prevent health check timeouts
+// Use /api/test/seed-database endpoint in development mode instead
+// if (import.meta.url === `file://${process.argv[1]}`) {
+//   seedDatabase()
+//     .then(() => {
+//       console.log("\n✨ Seeding complete!");
+//       process.exit(0);
+//     })
+//     .catch((error) => {
+//       console.error("❌ Seeding failed:", error);
+//       process.exit(1);
+//     });
+// }
 
 export { seedDatabase };
