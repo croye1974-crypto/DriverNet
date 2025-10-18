@@ -32,7 +32,7 @@ The application features a native mobile app aesthetic with a light gray backgro
 - **Subscription & Access Control**: Role-based access control, subscription status management, and Stripe integration for payment.
 - **Gamification**: Driver ratings, reputation scores, tier systems, and achievement badges.
 - **Driver Identification**: Call sign system (LL#### format).
-- **Location Input**: Flexible job location input allowing town/city names, postcode lookup, or current GPS.
+- **Location Input**: Flexible job location input allowing town/city names, enhanced postcode lookup with full address resolution (ward, district, county, region, postcode), or current GPS.
 - **Workflow Guidance**: Single "blue button" system to guide users through sequential actions.
 - **Progressive Web App (PWA)**: Complete PWA manifest, service worker for offline support, and iOS-specific optimizations.
 - **AI Route Optimization**: Intelligent route planning with driver density analysis and meet-up suggestions using TypeScript algorithms, including nearest-neighbor optimization, Haversine distances, and logistic regression for density scoring.

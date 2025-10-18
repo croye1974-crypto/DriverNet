@@ -261,19 +261,51 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
       const data = await res.json();
       
       if (data.status === 200 && data.result) {
-        const { latitude, longitude } = data.result;
+        const result = data.result;
+        
+        // Build a more complete address from available data
+        const addressParts: string[] = [];
+        
+        // Add ward if it's different from district (provides more specificity)
+        if (result.admin_ward && result.admin_ward !== result.admin_district) {
+          addressParts.push(result.admin_ward);
+        }
+        
+        // Add district
+        if (result.admin_district) {
+          addressParts.push(result.admin_district);
+        }
+        
+        // Add county if available and different from district
+        if (result.admin_county && result.admin_county !== result.admin_district) {
+          addressParts.push(result.admin_county);
+        }
+        
+        // Add region
+        if (result.region) {
+          addressParts.push(result.region);
+        }
+        
+        // Add postcode at the end for clarity
+        if (result.postcode) {
+          addressParts.push(result.postcode);
+        }
+        
+        const fullAddress = addressParts.join(", ");
         
         if (field === 'from') {
-          form.setValue("fromLat", latitude);
-          form.setValue("fromLng", longitude);
+          form.setValue("fromLat", result.latitude);
+          form.setValue("fromLng", result.longitude);
+          form.setValue("fromLocation", fullAddress);
         } else {
-          form.setValue("toLat", latitude);
-          form.setValue("toLng", longitude);
+          form.setValue("toLat", result.latitude);
+          form.setValue("toLng", result.longitude);
+          form.setValue("toLocation", fullAddress);
         }
         
         toast({
           title: "Location Found",
-          description: `Coordinates updated for ${field === 'from' ? 'pickup' : 'delivery'} location`,
+          description: `Address resolved: ${fullAddress}`,
         });
       } else {
         throw new Error("Invalid postcode data received");
