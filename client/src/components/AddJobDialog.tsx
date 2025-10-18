@@ -4,10 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Loader2, Search, Navigation } from "lucide-react";
+import { MapPin, Loader2, Search, Navigation, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { estimateJourneyTime, formatDuration, formatDistance, calculateDistance } from "@/lib/journey";
@@ -109,6 +111,8 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
   const [lookingUpFromPostcode, setLookingUpFromPostcode] = useState(false);
   const [lookingUpToPostcode, setLookingUpToPostcode] = useState(false);
   const [manualStartTime, setManualStartTime] = useState(false);
+  const [showInspectionInfo, setShowInspectionInfo] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // Find the last job in the schedule (sorted by estimated start time)
   const lastJob = existingJobs.length > 0 
@@ -196,6 +200,11 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     },
   });
 
+  const performCalculation = () => {
+    const { fromLat, fromLng, toLat, toLng } = form.getValues();
+    calculateJourney.mutate({ fromLat, fromLng, toLat, toLng });
+  };
+
   const handleCalculateJourney = () => {
     const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = form.getValues();
     
@@ -217,7 +226,26 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       return;
     }
     
-    calculateJourney.mutate({ fromLat, fromLng, toLat, toLng });
+    // Check if user has dismissed the inspection info message
+    const hideInspectionInfo = localStorage.getItem("hideInspectionInfo") === "true";
+    
+    if (hideInspectionInfo) {
+      // User has dismissed it before, proceed directly
+      performCalculation();
+    } else {
+      // Show the info dialog first
+      setShowInspectionInfo(true);
+    }
+  };
+
+  const handleInspectionInfoClose = () => {
+    // Save preference immediately before any state changes
+    if (dontShowAgain) {
+      localStorage.setItem("hideInspectionInfo", "true");
+    }
+    setShowInspectionInfo(false);
+    setDontShowAgain(false);
+    performCalculation();
   };
 
   const createJob = useMutation({
@@ -729,6 +757,45 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
           </form>
         </Form>
       </DialogContent>
+
+      {/* Inspection Time Information Alert */}
+      <AlertDialog open={showInspectionInfo} onOpenChange={setShowInspectionInfo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Vehicle Inspection Time Included
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-base">
+              <p>
+                The journey time calculation automatically includes <strong>45 minutes</strong> for the mandatory vehicle inspection that occurs with every trade plate pickup.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Total job time = Driving time (with live traffic) + 45 minute inspection
+              </p>
+              <div className="flex items-start gap-2 pt-2">
+                <Checkbox
+                  id="dont-show-again"
+                  checked={dontShowAgain}
+                  onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                  data-testid="checkbox-dont-show-inspection-info"
+                />
+                <label
+                  htmlFor="dont-show-again"
+                  className="text-sm leading-none cursor-pointer"
+                >
+                  Don't show this message again
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleInspectionInfoClose} data-testid="button-inspection-info-understood">
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

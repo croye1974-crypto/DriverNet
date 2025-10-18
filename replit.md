@@ -74,3 +74,12 @@ The architecture maintains clear separation between frontend, backend, and share
   - Cost at 20x Scale (2,000 drivers): ~180K requests/month = 80K × £2/1K = £160/month
   - Rate Limit: 300 requests/minute (sufficient for current and near-term projected usage)
 - Impact: Drivers now see accurate journey times accounting for real-world UK traffic conditions and mandatory inspection procedures
+
+### Inspection Time Information Dialog (October 2025)
+- Feature: Informational alert appears when clicking "Calculate Journey" for the first time
+- Message: Explains that the system automatically includes 45 minutes for mandatory vehicle inspection
+- User Option: "Don't show this message again" checkbox allows permanent dismissal
+- Persistence: Preference saved to localStorage (key: "hideInspectionInfo")
+- Behavior: After dismissal, subsequent "Calculate Journey" clicks proceed immediately without dialog
+- UI Components: Alert dialog with Clock icon, clear explanation, checkbox, and "Understood" button
+- Impact: Ensures drivers understand the inspection time is included while allowing power users to skip the message after first viewing
