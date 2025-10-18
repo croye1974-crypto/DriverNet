@@ -637,14 +637,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/jobs", async (req, res) => {
     try {
       const { date } = req.query;
-      const user = req.user as SessionUser | undefined;
+      const user = req.user as any;
       
-      if (!user) {
+      if (!user || !user.id) {
         return res.status(401).json({ error: "UNAUTHORIZED" });
       }
 
       // Get user's schedules
-      const userSchedules = await storage.getUserSchedules(user.id);
+      const userSchedules = await storage.getSchedulesByUserId(user.id);
       
       if (!userSchedules || userSchedules.length === 0) {
         return res.json([]);
@@ -654,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let allJobs: any[] = [];
       for (const schedule of userSchedules) {
         if (!date || schedule.date.startsWith(date as string)) {
-          const jobs = await storage.getScheduleJobs(schedule.id);
+          const jobs = await storage.getJobsByScheduleId(schedule.id);
           if (jobs) {
             allJobs = allJobs.concat(jobs);
           }
