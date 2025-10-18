@@ -766,26 +766,28 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
               <Clock className="h-5 w-5 text-primary" />
               Vehicle Inspection Time Included
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3 text-base">
-              <p>
-                The journey time calculation automatically includes <strong>45 minutes</strong> for the mandatory vehicle inspection that occurs with every trade plate pickup.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Total job time = Driving time (with live traffic) + 45 minute inspection
-              </p>
-              <div className="flex items-start gap-2 pt-2">
-                <Checkbox
-                  id="dont-show-again"
-                  checked={dontShowAgain}
-                  onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-                  data-testid="checkbox-dont-show-inspection-info"
-                />
-                <label
-                  htmlFor="dont-show-again"
-                  className="text-sm leading-none cursor-pointer"
-                >
-                  Don't show this message again
-                </label>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-base">
+                <p>
+                  The journey time calculation automatically includes <strong>45 minutes</strong> for the mandatory vehicle inspection that occurs with every trade plate pickup.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Total job time = Driving time (with live traffic) + 45 minute inspection
+                </p>
+                <div className="flex items-start gap-2 pt-2">
+                  <Checkbox
+                    id="dont-show-again"
+                    checked={dontShowAgain}
+                    onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                    data-testid="checkbox-dont-show-inspection-info"
+                  />
+                  <label
+                    htmlFor="dont-show-again"
+                    className="text-sm leading-none cursor-pointer"
+                  >
+                    Don't show this message again
+                  </label>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
