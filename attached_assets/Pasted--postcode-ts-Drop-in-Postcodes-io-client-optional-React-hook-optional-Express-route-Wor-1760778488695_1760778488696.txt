@@ -1,0 +1,184 @@
+// postcode.ts
+// Drop-in Postcodes.io client + optional React hook + optional Express route.
+// Works in browser or Node (fetch available in modern runtimes).
+
+// ---------- Types ----------
+export type PostcodeInfo = {
+  postcode: string;
+  lat: number;
+  lon: number;
+  country?: string;
+  region?: string;
+  admin_district?: string;
+  admin_ward?: string;
+  parliamentary_constituency?: string;
+};
+
+// ---------- Utils ----------
+const POSTCODES_BASE = "https://api.postcodes.io";
+const cache = new Map<string, PostcodeInfo>();
+
+export function normalizePostcode(input: string): string {
+  return input.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+// Simple UK postcode validator (covers main formats)
+export function isValidUKPostcode(input: string): boolean {
+  const v = normalizePostcode(input);
+  const re =
+    /^(GIR0AA|[A-PR-UWYZ][0-9][0-9A-Z]?[0-9][ABD-HJLNP-UW-Z]{2}|[A-PR-UWYZ][A-HK-Y][0-9][0-9A-Z]?[0-9][ABD-HJLNP-UW-Z]{2})$/;
+  return re.test(v);
+}
+
+// ---------- Core lookup with retry, timeout, and cache ----------
+async function fetchWithTimeout(url: string, ms = 8000, init?: RequestInit) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal, ...init });
+    return res;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+export async function lookupPostcode(rawPostcode: string): Promise<PostcodeInfo> {
+  if (!rawPostcode) throw new Error("No postcode provided");
+  if (!isValidUKPostcode(rawPostcode)) throw new Error("Invalid UK postcode format");
+
+  const key = normalizePostcode(rawPostcode);
+  if (cache.has(key)) return cache.get(key)!;
+
+  const url = `${POSTCODES_BASE}/postcodes/${key}`;
+  let lastErr: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetchWithTimeout(url, 8000);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Postcodes.io error ${res.status}: ${text || res.statusText}`);
+      }
+      const json = await res.json();
+      if (json.status !== 200 || !json.result) {
+        throw new Error(json.error || "Postcode lookup failed");
+      }
+      const r = json.result;
+      const info: PostcodeInfo = {
+        postcode: r.postcode,
+        lat: r.latitude,
+        lon: r.longitude,
+        country: r.country,
+        region: r.region,
+        admin_district: r.admin_district,
+        admin_ward: r.admin_ward,
+        parliamentary_constituency: r.parliamentary_constituency,
+      };
+      cache.set(key, info);
+      return info;
+    } catch (err) {
+      lastErr = err;
+      // brief backoff
+      await new Promise((s) => setTimeout(s, attempt * 200));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Postcode lookup failed");
+}
+
+// ---------- React hook (optional) ----------
+/*
+Usage:
+  const { result, loading, error, query, setQuery } = usePostcodeLookup();
+  <input value={query} onChange={e => setQuery(e.target.value)} />
+  useEffect(() => { if (result) setForm(prev => ({...prev, lat: result.lat, lon: result.lon })) }, [result])
+*/
+export function usePostcodeLookup(debounceMs = 400) {
+  // To keep this file standalone, we lazy import React only if available
+  // If you do not use React, tree-shaking will drop this.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const React = require("react") as typeof import("react");
+  const { useEffect, useRef, useState } = React;
+
+  const [query, setQuery] = useState("");
+  const [result, setResult] = useState<PostcodeInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lastLookedUp = useRef<string>("");
+
+  useEffect(() => {
+    if (!query) {
+      setResult(null);
+      setError(null);
+      return;
+    }
+    const normalized = normalizePostcode(query);
+
+    const t = setTimeout(async () => {
+      if (!isValidUKPostcode(normalized)) {
+        setError("Invalid UK postcode format");
+        setResult(null);
+        return;
+      }
+      if (lastLookedUp.current === normalized) return;
+
+      setLoading(true);
+      setError(null);
+      try {
+        const info = await lookupPostcode(normalized);
+        lastLookedUp.current = normalized;
+        setResult(info);
+      } catch (e: any) {
+        setError(e?.message || "Lookup failed");
+        setResult(null);
+      } finally {
+        setLoading(false);
+      }
+    }, debounceMs);
+
+    return () => clearTimeout(t);
+  }, [query, debounceMs]);
+
+  return { query, setQuery, result, loading, error };
+}
+
+// ---------- Optional Express route (server) ----------
+/*
+Usage in your server:
+  import express from "express";
+  import { registerPostcodeRoute } from "./postcode";
+  const app = express();
+  app.use(express.json());
+  registerPostcodeRoute(app);
+  app.listen(3000);
+Then POST to /api/postcodes/lookup with JSON { "postcode": "SW1A 1AA" }
+*/
+type ExpressApp = { post: (path: string, ...handlers: any[]) => void };
+export function registerPostcodeRoute(app: ExpressApp, path = "/api/postcodes/lookup") {
+  if (!app || typeof app.post !== "function") return;
+  app.post(path, async (req: any, res: any) => {
+    try {
+      const { postcode } = req.body || {};
+      const data = await lookupPostcode(String(postcode || ""));
+      res.status(200).json({ ok: true, data });
+    } catch (e: any) {
+      res.status(400).json({ ok: false, error: e?.message || "Lookup failed" });
+    }
+  });
+}
+
+// ---------- Guard helpers for your jobs flow (optional) ----------
+/*
+Example:
+  const user = await getCurrentUser(); // however you fetch it
+  await guardAuthenticated(user); // throws if not logged in
+*/
+export function guardAuthenticated(user: any) {
+  if (!user || !user.id) {
+    const err = new Error("Not authenticated");
+    // Attach a code so your UI can branch on it
+    // @ts-ignore
+    err.code = "AUTH_REQUIRED";
+    throw err;
+  }
+  return user;
+}

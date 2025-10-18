@@ -7,6 +7,8 @@ import { Loader2, TrendingUp, MapPin, Clock, Route, Sparkles } from "lucide-reac
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 
+const currentUserId = "user-1"; // Mock - will be replaced with real auth
+
 interface Job {
   id: string;
   fromLocation: string;
@@ -76,23 +78,33 @@ export default function AIRoutePlanner() {
 
   // Get current user
   const { data: user } = useQuery<{ id: string; username: string; name: string }>({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/users", currentUserId],
   });
 
-  // Get jobs for selected date
+  // Get schedules for user
+  const { data: schedules } = useQuery<{id: string; date: string; userId: string}[]>({
+    queryKey: ["/api/schedules/user", currentUserId],
+  });
+
+  // Find schedule for selected date
+  const currentSchedule = schedules?.find(s => s.date === selectedDate);
+
+  // Get jobs for selected date schedule
   const { data: jobs, error: jobsError, isLoading: jobsLoading } = useQuery<Job[]>({
-    queryKey: [`/api/jobs?date=${selectedDate}`],
-    enabled: !!user?.id,
+    queryKey: ["/api/jobs/schedule", currentSchedule?.id],
+    enabled: !!currentSchedule?.id,
   });
 
   // Debug logging
   console.log("AI Route Planner Debug:", {
     user,
     selectedDate,
+    schedules,
+    currentSchedule,
     jobs,
     jobsError: jobsError?.message,
     jobsLoading,
-    queryEnabled: !!user?.id
+    queryEnabled: !!currentSchedule?.id
   });
 
   // Optimize route mutation
