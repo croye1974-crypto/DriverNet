@@ -247,7 +247,17 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
     setLoading(true);
     
     try {
-      const res = await fetch(`https://api.postcodes.io/postcodes/${postcode}`);
+      const cleanPostcode = postcode.replace(/\s/g, "").toUpperCase();
+      const res = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
+      
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("Postcode not found. Please check and try again.");
+        } else {
+          throw new Error(`Unable to verify postcode (Status: ${res.status}). You can enter a location name instead.`);
+        }
+      }
+      
       const data = await res.json();
       
       if (data.status === 200 && data.result) {
@@ -266,18 +276,23 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
           description: `Coordinates updated for ${field === 'from' ? 'pickup' : 'delivery'} location`,
         });
       } else {
+        throw new Error("Invalid postcode data received");
+      }
+    } catch (error) {
+      // Only show toast if dialog is still open (prevents stale errors)
+      if (open) {
+        const errorMessage = error instanceof Error ? error.message : "Could not find postcode. Please check and try again.";
+        // Provide more helpful message for network errors
+        const friendlyMessage = errorMessage.includes("Failed to fetch") || errorMessage === "Load failed"
+          ? "Network error. Please check your connection and try again, or enter a location name instead."
+          : errorMessage;
+        
         toast({
-          title: "Postcode Not Found",
-          description: "Please check the postcode and try again",
+          title: "Postcode Lookup Failed",
+          description: friendlyMessage,
           variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Postcode Lookup Failed",
-        description: "Could not connect to postcode service",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }

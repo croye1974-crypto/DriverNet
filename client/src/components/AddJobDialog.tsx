@@ -319,7 +319,11 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       const response = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
       
       if (!response.ok) {
-        throw new Error("Postcode not found");
+        if (response.status === 404) {
+          throw new Error("Postcode not found. Please check and try again.");
+        } else {
+          throw new Error(`Unable to verify postcode (Status: ${response.status}). You can enter a location name instead.`);
+        }
       }
 
       const data = await response.json();
@@ -340,14 +344,23 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
         
         // No toast - location name shows success, speeds up workflow
       } else {
-        throw new Error("Invalid postcode data");
+        throw new Error("Invalid postcode data received");
       }
     } catch (error) {
-      toast({
-        title: "Postcode Lookup Failed",
-        description: error instanceof Error ? error.message : "Could not find postcode. Please check and try again.",
-        variant: "destructive",
-      });
+      // Only show toast if dialog is still open (prevents stale errors)
+      if (open) {
+        const errorMessage = error instanceof Error ? error.message : "Could not find postcode. Please check and try again.";
+        // Provide more helpful message for network errors
+        const friendlyMessage = errorMessage.includes("Failed to fetch") || errorMessage === "Load failed"
+          ? "Network error. Please check your connection and try again, or enter a location name instead."
+          : errorMessage;
+        
+        toast({
+          title: "Postcode Lookup Failed",
+          description: friendlyMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setter(false);
     }
