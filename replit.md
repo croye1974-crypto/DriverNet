@@ -16,7 +16,7 @@ DriveNet is a ride-sharing application specifically designed for trade plate car
 ## System Architecture
 
 ### UI/UX Decisions
-The application features a native mobile app aesthetic with a light gray background, subtle shadow-based elevation, and clean headers. It emphasizes a minimalist design with optimized spacing for mobile list density, larger bottom navigation icons, and a system font stack. The design supports both dark and light themes.
+The application features a bold, professional mobile design with a red, white, and blue British color palette. The interface uses high-contrast colors: soft blue-grey background (214 32% 91%), pure white cards with shadow-md, vibrant British blue primary buttons (217 91% 60%), and bold red accents (0 84% 60%). Section headers use colored backgrounds (alternating blue/red) with white text to create clear visual hierarchy. Form pages have strong contrast between sections with white cards on colored backgrounds. The design supports both dark and light themes with deep navy backgrounds in dark mode.
 
 ### Technical Implementations
 - **Frontend**: React 18 (TypeScript), Wouter, TanStack Query (v5), Shadcn UI + Radix UI, Tailwind CSS, React Hook Form with Zod.
@@ -83,3 +83,16 @@ The architecture maintains clear separation between frontend, backend, and share
 - Behavior: After dismissal, subsequent "Calculate Journey" clicks proceed immediately without dialog
 - UI Components: Alert dialog with Clock icon, clear explanation, checkbox, and "Understood" button
 - Impact: Ensures drivers understand the inspection time is included while allowing power users to skip the message after first viewing
+
+### Bold Red, White, Blue Design Update (October 2025)
+- **Design Overhaul**: Replaced muted grey aesthetic with high-contrast British color palette
+- **Color Scheme**:
+  - Background: Soft blue-grey (214 32% 91%) for reduced eye strain
+  - Cards: Pure white (0 0% 100%) for maximum contrast and readability
+  - Primary Actions: Vibrant British blue (217 91% 60%) for call-to-action buttons
+  - Accent/Destructive: Bold red (0 84% 60%) for highlights and warnings
+  - Text: Deep navy (222 47% 11%) instead of black for softer appearance
+- **Visual Hierarchy**: Section headers with colored backgrounds (alternating blue/red) and white text
+- **Form Design**: White cards on colored backgrounds for strong contrast between sections
+- **Dark Mode**: Deep navy background (222 47% 11%) with blue-grey cards (217 33% 17%)
+- **Impact**: Eliminates "bland grey" appearance with professional, trustworthy British identity that improves usability and visual appeal

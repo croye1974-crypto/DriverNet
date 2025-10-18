@@ -1,123 +1,118 @@
-# Design Guidelines: DriveNet - Native Mobile App Experience
+# Design Guidelines: DriveNet - Bold British Palette
 
 ## Design Philosophy
-**System**: iOS/Android native app aesthetics with ride-sharing UX patterns (Uber, Lyft, WhatsApp)
-**Justification**: Drivers need an instant, familiar mobile experience with zero learning curve. The design mimics native platform conventions for maximum usability and trust.
+**System**: Professional mobile app with bold red, white, and blue color scheme
+**Justification**: Drivers need a clear, high-contrast interface that's instantly recognizable. The red/white/blue palette creates strong visual hierarchy and reinforces the British trade plate driver identity.
 
 ## Core Design Principles
 
 ### Visual Language
-- **Minimal Borders**: No heavy borders on cards - use subtle shadows and background contrast instead
-- **Clean Surfaces**: Cards float on background with subtle elevation, not outlined boxes
-- **Native Spacing**: Generous padding, breathing room between elements
-- **System Fonts**: -apple-system, SF Pro, Roboto for native feel
-- **Flat & Fast**: Minimal decorative elements, maximum content clarity
+- **Bold Contrast**: Clear visual distinction between sections using color
+- **Confident Colors**: Red, white, and blue create professional, trustworthy appearance
+- **Clean Surfaces**: White cards on colored backgrounds for maximum clarity
+- **Strong Headers**: Colored section headers to organize content
+- **Clear Hierarchy**: Color reinforces information priority
 
 ### Color Palette
 **Light Mode:**
-- Background: 0 0% 95% (light gray, not white - native apps rarely use pure white backgrounds)
-- Surface/Card: 0 0% 100% (white cards on gray background)
-- Primary: 220 85% 50% (iOS blue-inspired)
-- Text Primary: 0 0% 13% (near black)
-- Text Secondary: 0 0% 45% (medium gray)
-- Text Tertiary: 0 0% 60% (light gray for metadata)
-- Divider: 0 0% 90% (subtle separators)
-- Success: 142 76% 36% (iOS green)
-- Destructive: 0 76% 50% (iOS red)
+- Background: 214 32% 91% (soft blue-grey background)
+- Surface/Card: 0 0% 100% (pure white cards for maximum contrast)
+- Primary Blue: 217 91% 60% (vibrant British blue - #3B82F6)
+- Accent Red: 0 84% 60% (bold red for highlights - #F85149)
+- Text Primary: 222 47% 11% (deep navy, not black)
+- Text Secondary: 215 16% 47% (blue-grey)
+- Text Tertiary: 214 14% 66% (light blue-grey)
+- Success: 142 76% 36% (green)
+- Destructive: 0 84% 60% (matches accent red)
+- Border: 214 20% 85% (subtle blue-tinted borders)
+- Input Background: 214 32% 97% (very light blue)
 
 **Dark Mode:**
-- Background: 0 0% 0% (true black for OLED)
-- Surface/Card: 0 0% 10% (elevated surfaces)
-- Primary: 220 85% 60%
-- Text Primary: 0 0% 92%
-- Text Secondary: 0 0% 65%
-- Text Tertiary: 0 0% 50%
-- Divider: 0 0% 20%
+- Background: 222 47% 11% (deep navy)
+- Surface/Card: 217 33% 17% (dark blue-grey cards)
+- Primary Blue: 217 91% 70%
+- Accent Red: 0 84% 65%
+- Text Primary: 210 20% 98%
+- Text Secondary: 214 14% 70%
+- Text Tertiary: 214 14% 55%
+- Border: 217 33% 25%
+- Input Background: 217 33% 20%
 
 ### Typography
 - **Font Stack**: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Roboto", sans-serif
 - **Weights**: Regular (400), Medium (500), Semibold (600), Bold (700)
 - **Hierarchy**:
-  - Navigation Titles: text-lg font-semibold
-  - Section Headers: text-base font-semibold
-  - Primary Text: text-base font-normal
+  - Page Titles: text-2xl font-bold text-foreground
+  - Section Headers: text-lg font-semibold text-primary
+  - Card Titles: text-base font-semibold text-foreground
+  - Body Text: text-base text-foreground
   - Secondary Text: text-sm text-muted-foreground
   - Captions: text-xs text-tertiary
 
 ### Layout System
 **Spacing** (Tailwind units):
-- Screen padding: px-4 (consistent app margins)
-- Card padding: p-4
-- Between cards: space-y-2 (tight, app-like list feel)
+- Screen padding: px-4
+- Card padding: p-5 (generous padding for comfort)
+- Between cards: space-y-3
 - Between sections: space-y-6
-- Component internal gaps: gap-3
+- Section header margins: mb-4
+- Component gaps: gap-4
 
-**Safe Areas**:
-- Top: Account for status bar and header
-- Bottom: Space for bottom navigation (16 height + safe area)
-- Horizontal: Consistent 16px margins
+**Visual Sections**:
+- Use colored backgrounds for section headers
+- White cards with shadows for content
+- Colored badges and buttons for actions
+- Clear borders to separate form fields
 
 ### Component Patterns
 
-**Navigation**
-- **Bottom Tab Bar**: Fixed, 4 tabs, icons + labels, active state with color change
-- **Top Header**: Clean title + optional action button, no heavy styling
-- **No visible borders**: Use background color changes instead
+**Section Headers**
+- Background: bg-primary or bg-accent (alternate red/blue)
+- Text: white, font-semibold
+- Padding: p-3 or p-4
+- Rounded corners: rounded-lg
+- Optional icons for visual interest
 
-**Cards (List Items)**
-- No borders, just shadow-sm for subtle elevation
-- Background: white (light) / elevated surface (dark)
-- Rounded: rounded-xl for modern feel
-- Padding: p-4 consistent
-- Tap feedback: subtle scale on press
-- Look like native iOS/Android list cells
-
-**Driver/Lift Cards**
-- Avatar (left, 48px)
-- Content (center, flex-grow)
-- Metadata (right, time/distance)
-- Route visual: Simple icon-based start → end
-- CTA button: Full width or inline, native style
+**Cards**
+- Pure white background (bg-card)
+- shadow-md for depth
+- Rounded: rounded-xl
+- Padding: p-5
+- Clear contrast against background
 
 **Forms & Inputs**
-- Native-style input fields with background fill
-- Clear touch targets (min 44px height)
-- Labels above inputs (iOS style) or floating
-- Minimal borders, use background color instead
+- Light blue background (bg-input)
+- Clear labels above inputs
+- Generous touch targets (min 44px)
+- Primary blue focus rings
+- Group related fields in white cards with colored headers
 
-**Bottom Sheet / Modals**
-- Slide up from bottom with backdrop
-- Rounded top corners
-- Drag handle for dismissal
-- Native animation timing
+**Buttons**
+- Primary: Blue with white text (call-to-action)
+- Destructive: Red with white text (delete/cancel)
+- Secondary: Light grey with dark text (optional actions)
+- Outline: Border only, adapts to context
+
+**Bottom Navigation**
+- White background with shadow
+- Icons: Blue when active, grey when inactive
+- Red notification badges
 
 **Lists**
-- No card borders in lists
-- Dividers between items (1px hairline)
-- Swipe actions where appropriate
-- Pull to refresh feel
+- White cards with shadow-sm
+- Alternate colored accents (blue/red) for categories
+- Clear spacing between items
 
 ### Interaction Patterns
-- **Instant Feedback**: Visual response within 16ms
-- **Native Gestures**: Swipe, tap, long-press where expected
-- **Smooth Transitions**: 200-300ms ease curves
-- **Loading States**: Skeleton screens, not spinners
-- **Empty States**: Friendly, helpful messaging with action prompts
-
-### Shadows & Elevation
-- **Level 0**: No shadow (flush with background)
-- **Level 1**: shadow-sm (default cards)
-- **Level 2**: shadow-md (modals, popovers)
-- **Level 3**: shadow-lg (important dialogs)
-
-### Status Indicators
-- **Badges**: Small, pill-shaped, right-aligned
-- **Dots**: 8px circle for notification counts
-- **Icons**: Lucide icons, 20px standard size
+- **Color Feedback**: Blue for success, red for errors
+- **Active States**: Deeper color on press
+- **Focus States**: Blue ring around inputs
+- **Loading**: Blue spinner/skeleton
+- **Badges**: Red for notifications, blue for status
 
 ### Key UX Rules
-1. **Thumb Zone**: Critical actions in bottom 50% of screen
-2. **One Action**: Primary button always clear and prominent
-3. **Context Aware**: Show relevant info based on user state
-4. **Instant Updates**: Real-time without manual refresh
-5. **Forgiving**: Easy undo, clear confirmation for destructive actions
+1. **High Contrast**: Always use white cards on colored backgrounds
+2. **Color Meaning**: Blue = primary actions, Red = important/destructive
+3. **Clear Sections**: Use colored headers to organize content
+4. **Visual Hierarchy**: Larger, bolder, more colorful = more important
+5. **Consistency**: Same colors mean same things throughout app
