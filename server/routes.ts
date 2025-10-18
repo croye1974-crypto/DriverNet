@@ -90,6 +90,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
+  // POST /api/calculate-journey - Calculate journey time using Mapbox with real-time traffic
+  // NOTE: Requires MAPBOX_API_KEY environment variable (set in Replit Secrets)
+  // Get your free API key at: https://account.mapbox.com/auth/signup/
+  // Free tier: 100K requests/month (typical usage: ~9K/month for 100 drivers)
+  app.post("/api/calculate-journey", async (req, res) => {
+    try {
+      const schema = z.object({
+        fromLat: z.number().min(-90).max(90),
+        fromLng: z.number().min(-180).max(180),
+        toLat: z.number().min(-90).max(90),
+        toLng: z.number().min(-180).max(180),
+      });
+
+      const { fromLat, fromLng, toLat, toLng } = schema.parse(req.body);
+      
+      const MAPBOX_API_KEY = process.env.MAPBOX_API_KEY;
+      if (!MAPBOX_API_KEY) {
+        return res.status(500).json({ error: "Mapbox API key not configured" });
+      }
+
+      // Build Mapbox Directions API URL with driving-traffic profile for real-time traffic
+      const coords = `${fromLng},${fromLat};${toLng},${toLat}`;
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coords}?access_token=${MAPBOX_API_KEY}&geometries=geojson&overview=full`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Mapbox API error:", errorText);
+        return res.status(500).json({ error: "Failed to calculate journey with Mapbox" });
+      }
+
+      const data = await response.json();
+      const route = data.routes?.[0];
+      
+      if (!route) {
+        return res.status(404).json({ error: "No route found" });
+      }
+
+      // Duration is in seconds, distance is in meters
+      const drivingTimeMinutes = Math.ceil(route.duration / 60);
+      const distanceMiles = (route.distance / 1609.34); // meters to miles
+      
+      // Add 45 minutes for vehicle inspection (required for every pickup)
+      const INSPECTION_TIME_MINUTES = 45;
+      const totalTimeMinutes = drivingTimeMinutes + INSPECTION_TIME_MINUTES;
+
+      res.json({
+        drivingTimeMinutes,
+        inspectionTimeMinutes: INSPECTION_TIME_MINUTES,
+        totalTimeMinutes,
+        distanceMiles: parseFloat(distanceMiles.toFixed(1)),
+        trafficAware: true,
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid coordinates", details: error.errors });
+      }
+      console.error("Calculate journey error:", error);
+      res.status(500).json({ error: "Failed to calculate journey" });
+    }
+  });
+
   // AI Routing Endpoints
   
   // POST /api/ai/plan-route - Optimize multi-stop route with ETA predictions

@@ -158,7 +158,44 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
     }
   }, [open, scheduleDate, form]);
 
-  // Manual journey calculation
+  // Journey calculation using Mapbox API with real-time traffic
+  const calculateJourney = useMutation({
+    mutationFn: async ({ fromLat, fromLng, toLat, toLng }: { fromLat: number; fromLng: number; toLat: number; toLng: number }) => {
+      const res = await apiRequest("POST", "/api/calculate-journey", {
+        fromLat,
+        fromLng,
+        toLat,
+        toLng,
+      });
+      return res.json();
+    },
+    onSuccess: (data: { totalTimeMinutes: number; drivingTimeMinutes: number; inspectionTimeMinutes: number }) => {
+      const { estimatedStartTime } = form.getValues();
+      
+      // Parse the start time (HH:MM) and add total journey time (driving + 45 min inspection)
+      const [startHour, startMin] = estimatedStartTime.split(':').map(Number);
+      const startTotalMinutes = startHour * 60 + startMin;
+      const endTotalMinutes = startTotalMinutes + data.totalTimeMinutes;
+      
+      // Convert back to HH:MM format
+      const endHour = Math.floor(endTotalMinutes / 60) % 24;
+      const endMin = endTotalMinutes % 60;
+      const formattedEnd = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+      
+      form.setValue("estimatedEndTime", formattedEnd);
+      setManualStartTime(false); // Reset after calculation
+      
+      // No toast - end time populating is sufficient feedback, speeds up workflow
+    },
+    onError: (error) => {
+      toast({
+        title: "Journey Calculation Failed",
+        description: error instanceof Error ? error.message : "Could not calculate journey time with Mapbox",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCalculateJourney = () => {
     const { fromLat, fromLng, toLat, toLng, estimatedStartTime } = form.getValues();
     
@@ -180,22 +217,7 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
       return;
     }
     
-    const journeyMinutes = estimateJourneyTime(fromLat, fromLng, toLat, toLng);
-    
-    // Parse the start time (HH:MM) and add journey minutes
-    const [startHour, startMin] = estimatedStartTime.split(':').map(Number);
-    const startTotalMinutes = startHour * 60 + startMin;
-    const endTotalMinutes = startTotalMinutes + journeyMinutes;
-    
-    // Convert back to HH:MM format
-    const endHour = Math.floor(endTotalMinutes / 60) % 24;
-    const endMin = endTotalMinutes % 60;
-    const formattedEnd = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
-    
-    form.setValue("estimatedEndTime", formattedEnd);
-    setManualStartTime(false); // Reset after calculation
-    
-    // No toast - end time populating is sufficient feedback, speeds up workflow
+    calculateJourney.mutate({ fromLat, fromLng, toLat, toLng });
   };
 
   const createJob = useMutation({
@@ -589,11 +611,21 @@ export default function AddJobDialog({ open, onOpenChange, scheduleId, jobCount,
                     : "outline"
                 }
                 onClick={handleCalculateJourney}
+                disabled={calculateJourney.isPending}
                 className="w-full"
                 data-testid="button-calculate-journey"
               >
-                <Navigation className="h-4 w-4 mr-2" />
-                Calculate Journey
+                {calculateJourney.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="h-4 w-4 mr-2" />
+                    Calculate Journey
+                  </>
+                )}
               </Button>
             </div>
 
