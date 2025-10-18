@@ -1,0 +1,309 @@
+// server.js
+// Minimal DriverNet AI-feel backend stub
+// Endpoints: /plan-route, /driver-density, /ai-summary
+// Works without external APIs. Replace stubs with real routing and DB when ready.
+
+const express = require("express");
+const cors = require("cors");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// --------------------------- Helpers ---------------------------
+
+// Basic haversine distance in km
+function haversineKm(a, b) {
+  const R = 6371;
+  const dLat = (toRad(b.lat - a.lat));
+  const dLng = (toRad(b.lng - a.lng));
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  return R * c;
+}
+function toRad(d) { return d * Math.PI / 180; }
+
+// Cheap ETA: assume avg 70 kmh road mix, add small bias for peak hours
+function estimateMinutesKm(distanceKm, whenISO) {
+  const baseMins = (distanceKm / 70) * 60;
+  const dt = whenISO ? new Date(whenISO) : new Date();
+  const hour = dt.getUTCHours();
+  const peak = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 18);
+  const bias = peak ? 1.18 : 1.05;
+  return Math.round(baseMins * bias + 5); // add 5 min overhead
+}
+
+// Very light nearest neighbor ordering with window check
+function orderLegs(startPoint, legs) {
+  const remaining = legs.map((leg, i) => ({ ...leg, __idx: i }));
+  const ordered = [];
+  let cursor = startPoint;
+  while (remaining.length) {
+    // pick the pickup nearest to cursor
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = haversineKm(cursor, remaining[i].pickup);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    const chosen = remaining.splice(bestIdx, 1)[0];
+    ordered.push(chosen);
+    cursor = chosen.dropoff;
+  }
+  return ordered;
+}
+
+// Encode a very simple fake polyline representation
+function fakeEncodePolyline(points) {
+  // Not a true Google polyline. This is a compact JSON string for demo.
+  return "enc:" + Buffer.from(JSON.stringify(points.map(p => [Number(p.lat.toFixed(5)), Number(p.lng.toFixed(5))]))).toString("base64");
+}
+
+// Decode our fake polyline
+function fakeDecodePolyline(poly) {
+  if (!poly.startsWith("enc:")) return [];
+  try {
+    const arr = JSON.parse(Buffer.from(poly.slice(4), "base64").toString("utf8"));
+    return arr.map(([lat, lng]) => ({ lat, lng }));
+  } catch {
+    return [];
+  }
+}
+
+// Corridor check
+function pointNearPolylineKm(point, polyPts, radiusKm) {
+  // simple check: near any vertex within radius
+  for (const pt of polyPts) {
+    if (haversineKm(point, pt) <= radiusKm) return true;
+  }
+  return false;
+}
+
+// Seeded random for stable demo values
+function seededRand(seed) {
+  let x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+// --------------------------- In memory demo data ---------------------------
+
+// Simulated live pings. Replace with DB or Redis later.
+let DEMO_PINGS = [
+  // Midlands
+  { driver_id: "drv_A", lat: 52.04, lng: -1.19, speed_kph: 62, bearing_deg: 35, ping_time: new Date().toISOString() },
+  { driver_id: "drv_B", lat: 52.06, lng: -1.21, speed_kph: 54, bearing_deg: 28, ping_time: new Date().toISOString() },
+  // M1 corridor
+  { driver_id: "drv_C", lat: 52.20, lng: -1.05, speed_kph: 70, bearing_deg: 10, ping_time: new Date().toISOString() },
+  // Coventry area
+  { driver_id: "drv_D", lat: 52.41, lng: -1.51, speed_kph: 40, bearing_deg: 300, ping_time: new Date().toISOString() }
+];
+
+// --------------------------- Endpoints ---------------------------
+
+app.post("/plan-route", (req, res) => {
+  try {
+    const { driver_id, date, legs, optimize_order = true, preferences = {} } = req.body || {};
+    if (!driver_id) return res.status(400).json({ error: "MISSING_FIELD", field: "driver_id" });
+    if (!Array.isArray(legs) || legs.length === 0) return res.status(400).json({ error: "MISSING_FIELD", field: "legs" });
+
+    // Validate basic fields
+    for (let i = 0; i < legs.length; i++) {
+      const L = legs[i];
+      if (!L.pickup || !L.dropoff) return res.status(400).json({ error: "MISSING_FIELD", field: `legs[${i}].pickup or dropoff` });
+      if (typeof L.pickup.lat !== "number" || typeof L.pickup.lng !== "number" || typeof L.dropoff.lat !== "number" || typeof L.dropoff.lng !== "number") {
+        return res.status(400).json({ error: "INVALID_COORDS", field: `legs[${i}]` });
+      }
+    }
+
+    // Derive a start point
+    const startTime = preferences.start_time || (date ? `${date}T08:00:00Z` : new Date().toISOString());
+    const startPoint = legs[0]?.pickup || { lat: 51.5, lng: -0.12 };
+
+    // Order legs
+    const ordered = optimize_order ? orderLegs(startPoint, legs) : legs;
+
+    // Build a route path: start -> each pickup -> each dropoff
+    const path = [];
+    let cursor = startPoint;
+    let totalKm = 0;
+    const itinerary = [];
+
+    for (let i = 0; i < ordered.length; i++) {
+      const leg = ordered[i];
+      // move cursor to pickup
+      path.push(cursor);
+      path.push(leg.pickup);
+      totalKm += haversineKm(cursor, leg.pickup);
+
+      // pickup to dropoff
+      path.push(leg.dropoff);
+      totalKm += haversineKm(leg.pickup, leg.dropoff);
+
+      // ETA math
+      const prevDropEta = itinerary.length ? new Date(itinerary[itinerary.length - 1].dropoff_eta) : new Date(startTime);
+      const toPickupMins = estimateMinutesKm(haversineKm(cursor, leg.pickup), prevDropEta.toISOString());
+      const pickupEta = new Date(prevDropEta.getTime() + toPickupMins * 60000);
+
+      const toDropMins = estimateMinutesKm(haversineKm(leg.pickup, leg.dropoff), pickupEta.toISOString());
+      const dropEta = new Date(pickupEta.getTime() + toDropMins * 60000);
+
+      const band = 10;
+      itinerary.push({
+        leg_id: leg.leg_id || `leg_${i + 1}`,
+        pickup_eta: pickupEta.toISOString(),
+        dropoff_eta: dropEta.toISOString(),
+        eta_low: new Date(dropEta.getTime() - band * 60000).toISOString(),
+        eta_high: new Date(dropEta.getTime() + band * 60000).toISOString(),
+        advisories: leg.notes ? [leg.notes] : []
+      });
+
+      cursor = leg.dropoff;
+    }
+
+    const driveMinutes = itinerary.length ? Math.max(0, Math.round((new Date(itinerary[itinerary.length - 1].dropoff_eta) - new Date(startTime)) / 60000)) : 0;
+    const polyline = fakeEncodePolyline(path);
+
+    // Suggest 1 meet window after first drop
+    const firstDrop = itinerary[0] ? new Date(itinerary[0].dropoff_eta) : new Date(startTime);
+    const meetStart = new Date(firstDrop.getTime() + 10 * 60000);
+    const meetEnd = new Date(firstDrop.getTime() + 30 * 60000);
+    const near = path[Math.floor(path.length / 3)] || cursor;
+
+    const resp = {
+      plan_id: `plan_${Math.random().toString(36).slice(2, 6)}`,
+      driver_id,
+      date: date || new Date().toISOString().slice(0, 10),
+      summary: `Start ${new Date(startTime).toISOString().slice(11, 16)}. ${ordered.length} legs. Est finish ${itinerary.length ? itinerary[itinerary.length - 1].dropoff_eta.slice(11, 16) : "N A"}.`,
+      itinerary,
+      route: {
+        polyline,
+        distance_km: Number(totalKm.toFixed(1)),
+        drive_minutes: driveMinutes
+      },
+      suggested_meet_windows: [{
+        window_start: meetStart.toISOString(),
+        window_end: meetEnd.toISOString(),
+        nearby_corridor: { lat: Number((near.lat || 52.04).toFixed(3)), lng: Number((near.lng || -1.19).toFixed(3)), radius_km: 3.0 },
+        reason: "Gap after first drop. Known driver activity corridor."
+      }]
+    };
+
+    return res.json(resp);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+app.post("/driver-density", (req, res) => {
+  try {
+    const { route_polyline, legs, time_window_start, time_window_end, corridor_radius_km = 5, min_bearing_match_deg = 35 } = req.body || {};
+
+    // Build poly points
+    let polyPts = [];
+    if (route_polyline) {
+      polyPts = fakeDecodePolyline(route_polyline);
+    } else if (Array.isArray(legs) && legs.length >= 2) {
+      polyPts = legs.map(p => ({ lat: p.lat, lng: p.lng }));
+    } else {
+      return res.status(400).json({ error: "MISSING_ROUTE", detail: "Provide route_polyline or legs[]" });
+    }
+
+    // Filter pings near the corridor and roughly same bearing if provided
+    const active = DEMO_PINGS.filter(p => {
+      const near = pointNearPolylineKm({ lat: p.lat, lng: p.lng }, polyPts, corridor_radius_km);
+      if (!near) return false;
+      if (typeof p.bearing_deg === "number" && typeof min_bearing_match_deg === "number") {
+        // Compare against simple segment bearing from first to last point
+        const segBearing = bearingDeg(polyPts[0], polyPts[polyPts.length - 1]);
+        const diff = angleDiffDeg(p.bearing_deg, segBearing);
+        return diff <= min_bearing_match_deg;
+      }
+      return true;
+    });
+
+    // Simple predicted availability
+    const lookbackSeed = new Date(time_window_start || new Date().toISOString()).getUTCHours() + active.length * 7;
+    const histCluster = Math.floor(seededRand(lookbackSeed) * 10); // 0..9 virtual historical count
+    const activeNow = active.length;
+    const hour = new Date(time_window_start || new Date().toISOString()).getUTCHours();
+    const weekdayEffect = [1, 1.05, 1.1, 1.1, 1.15, 1.05, 0.9][new Date().getUTCDay()] || 1;
+
+    // Logistic style score
+    const z = 0.15 * activeNow + 0.1 * histCluster + 0.02 * hour + Math.log(weekdayEffect);
+    const densityScore = Math.max(0, Math.min(1, 1 / (1 + Math.exp(-z))));
+    const label = densityScore < 0.34 ? "Low" : densityScore < 0.67 ? "Medium" : "High";
+    const predictedAvailable = Math.max(activeNow, Math.round((activeNow + histCluster) * densityScore));
+
+    const centerIdx = Math.max(1, Math.floor(polyPts.length / 2));
+    const hotspotCenter = polyPts[centerIdx] || polyPts[0];
+
+    return res.json({
+      density_score: Number(densityScore.toFixed(2)),
+      label,
+      active_driver_count: activeNow,
+      predicted_available_in_window: predictedAvailable,
+      hotspots: [{
+        center: hotspotCenter,
+        radius_km: Math.max(3, corridor_radius_km - 1),
+        score: Number(Math.min(1, densityScore + 0.1).toFixed(2)),
+        why: "Time and route match typical activity pattern"
+      }],
+      method: {
+        radius_km: corridor_radius_km,
+        bearing_match_deg: min_bearing_match_deg,
+        lookback_days: 28
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+app.post("/ai-summary", (req, res) => {
+  try {
+    const { plan_id, density_context, tone = "concise" } = req.body || {};
+    // This is a template stub. Replace with a real LLM call if you like.
+    const score = density_context?.density_score ?? 0;
+    const level = score >= 0.67 ? "strong" : score >= 0.34 ? "moderate" : "low";
+    const windowText = density_context?.window
+      ? `${density_context.window.start?.slice(11, 16)} to ${density_context.window.end?.slice(11, 16)}`
+      : "the next 2 hours";
+
+    const text =
+      tone === "friendly"
+        ? `Plan ${plan_id || ""} looks solid. Expect ${level} driver presence along your route around ${windowText}. Share your plan to sync a lift.`
+        : `You have ${level} nearby driver presence around ${windowText}. Share your plan to line up a lift.`;
+
+    return res.json({ text: text.trim() });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+// Bearing between two coords
+function bearingDeg(a, b) {
+  const y = Math.sin(toRad(b.lng - a.lng)) * Math.cos(toRad(b.lat));
+  const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) - Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(toRad(b.lng - a.lng));
+  const brng = Math.atan2(y, x) * 180 / Math.PI;
+  return (brng + 360) % 360;
+}
+function angleDiffDeg(a, b) {
+  let d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+// Health check
+app.get("/", (_, res) => res.send("DriverNet AI stub running"));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server listening on :${PORT}`));
