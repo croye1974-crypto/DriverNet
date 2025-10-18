@@ -162,3 +162,28 @@ The application features clear separation between frontend, backend, and shared 
 - Location Display: What3Words addresses stored with /// prefix in location fields
 - Blue Button Workflow: What3Words search buttons follow same progressive flow as postcode lookup
 - Impact: Drivers can share precise meetup locations (e.g., specific parking bay) without complex addresses
+
+### AI Route Optimization (Implemented)
+- Feature: Intelligent route planning with driver density analysis and meet-up suggestions
+- Backend Implementation: TypeScript conversion of AI routing algorithms with full Zod validation
+- API Endpoints:
+  - POST `/api/ai/plan-route`: Optimizes multi-stop routes with ETA predictions and distance calculations
+  - POST `/api/ai/driver-density`: Analyzes driver density along routes using live lift offer/request data
+  - POST `/api/ai/summary`: Generates AI-powered text summaries with meet-up window suggestions
+- Algorithms:
+  - Nearest-neighbor route optimization for minimal total distance
+  - Haversine distance calculations (miles) with peak-hour traffic adjustments
+  - Logistic regression for driver density scoring (0-1 scale)
+  - Polyline encoding/decoding for route visualization
+  - Bearing calculations for directional matching
+- Frontend UI (`client/src/pages/AIRoutePlanner.tsx`):
+  - Date selection for choosing optimization day
+  - Job selection with checkboxes (select all/clear options)
+  - "Optimize Route" button triggering all 3 AI endpoints
+  - Real-time insights: optimized route summary, ETAs, total distance, driver density analysis
+  - Meet-up window suggestions based on schedule gaps
+  - Mobile-first design with Card-based layout
+- Bottom Navigation: "AI Route" tab with Sparkles icon positioned between Schedule and Messages
+- Error Handling: Comprehensive null guards, response validation, descriptive error messages
+- Distance Units: All calculations in miles (UK standard)
+- Impact: Drivers can optimize complex multi-stop routes, identify high-density areas for lift sharing, and plan strategic meet-up windows
