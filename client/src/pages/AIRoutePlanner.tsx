@@ -80,9 +80,19 @@ export default function AIRoutePlanner() {
   });
 
   // Get jobs for selected date
-  const { data: jobs } = useQuery<Job[]>({
+  const { data: jobs, error: jobsError, isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: [`/api/jobs?date=${selectedDate}`],
     enabled: !!user?.id,
+  });
+
+  // Debug logging
+  console.log("AI Route Planner Debug:", {
+    user,
+    selectedDate,
+    jobs,
+    jobsError: jobsError?.message,
+    jobsLoading,
+    queryEnabled: !!user?.id
   });
 
   // Optimize route mutation
