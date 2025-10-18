@@ -81,7 +81,7 @@ export default function AIRoutePlanner() {
 
   // Get jobs for selected date
   const { data: jobs } = useQuery<Job[]>({
-    queryKey: ["/api/jobs", selectedDate],
+    queryKey: [`/api/jobs?date=${selectedDate}`],
     enabled: !!user?.id,
   });
 

@@ -637,14 +637,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/jobs", async (req, res) => {
     try {
       const { date } = req.query;
-      const user = req.user as any;
       
-      if (!user || !user.id) {
+      if (!req.session?.userId) {
         return res.status(401).json({ error: "UNAUTHORIZED" });
       }
 
       // Get user's schedules
-      const userSchedules = await storage.getSchedulesByUserId(user.id);
+      const userSchedules = await storage.getSchedulesByUserId(req.session.userId);
       
       if (!userSchedules || userSchedules.length === 0) {
         return res.json([]);
