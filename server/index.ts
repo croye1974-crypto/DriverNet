@@ -112,9 +112,9 @@ app.use((req, res, next) => {
   const path = req.path;
   let capturedJsonResponse: any;
   const originalResJson = res.json.bind(res);
-  res.json = function (bodyJson: any, ...args: any[]) {
+  res.json = function (bodyJson: any) {
     capturedJsonResponse = bodyJson;
-    return originalResJson(bodyJson, ...args);
+    return originalResJson(bodyJson);
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
