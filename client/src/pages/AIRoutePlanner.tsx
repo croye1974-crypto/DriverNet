@@ -79,17 +79,10 @@ export default function AIRoutePlanner() {
     queryKey: ["/api/user"],
   });
 
-  // Get schedules for the selected date
-  const { data: schedules } = useQuery<Array<{ id: string; date: string; userId: string }>>({
-    queryKey: ["/api/schedules/user", user?.id],
-    enabled: !!user?.id,
-  });
-
-  // Get jobs for selected schedule
-  const schedule = schedules?.find((s) => s.date.startsWith(selectedDate));
+  // Get jobs for selected date
   const { data: jobs } = useQuery<Job[]>({
-    queryKey: ["/api/jobs/schedule", schedule?.id],
-    enabled: !!schedule?.id,
+    queryKey: ["/api/jobs", selectedDate],
+    enabled: !!user?.id,
   });
 
   // Optimize route mutation

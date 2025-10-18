@@ -710,6 +710,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/jobs - Get all jobs (optionally filtered by date)
+  app.get("/api/jobs", async (req, res) => {
+    try {
+      const { date } = req.query;
+      const user = req.user as SessionUser | undefined;
+      
+      if (!user) {
+        return res.status(401).json({ error: "UNAUTHORIZED" });
+      }
+
+      // Get user's schedules
+      const userSchedules = await storage.getUserSchedules(user.id);
+      
+      if (!userSchedules || userSchedules.length === 0) {
+        return res.json([]);
+      }
+
+      // Get jobs from all schedules or filtered by date
+      let allJobs: any[] = [];
+      for (const schedule of userSchedules) {
+        if (!date || schedule.date.startsWith(date as string)) {
+          const jobs = await storage.getScheduleJobs(schedule.id);
+          if (jobs) {
+            allJobs = allJobs.concat(jobs);
+          }
+        }
+      }
+
+      res.json(allJobs);
+    } catch (error) {
+      console.error("GET /api/jobs error:", error);
+      res.status(500).json({ error: "SERVER_ERROR" });
+    }
+  });
+
   app.post("/api/jobs", async (req, res) => {
     try {
       const validatedData = insertJobSchema.parse(req.body);
