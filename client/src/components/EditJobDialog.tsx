@@ -247,69 +247,27 @@ export default function EditJobDialog({ open, onOpenChange, job, scheduleId, pre
     setLoading(true);
     
     try {
-      const cleanPostcode = postcode.replace(/\s/g, "").toUpperCase();
-      const res = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
-      
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error("Postcode not found. Please check and try again.");
-        } else {
-          throw new Error(`Unable to verify postcode (Status: ${res.status}). You can enter a location name instead.`);
-        }
-      }
+      // Use our backend endpoint to avoid CORS issues
+      const res = await apiRequest("POST", "/api/lookup-postcode", {
+        postcode: postcode.trim(),
+      });
       
       const data = await res.json();
       
-      if (data.status === 200 && data.result) {
-        const result = data.result;
-        
-        // Build a more complete address from available data
-        const addressParts: string[] = [];
-        
-        // Add ward if it's different from district (provides more specificity)
-        if (result.admin_ward && result.admin_ward !== result.admin_district) {
-          addressParts.push(result.admin_ward);
-        }
-        
-        // Add district
-        if (result.admin_district) {
-          addressParts.push(result.admin_district);
-        }
-        
-        // Add county if available and different from district
-        if (result.admin_county && result.admin_county !== result.admin_district) {
-          addressParts.push(result.admin_county);
-        }
-        
-        // Add region
-        if (result.region) {
-          addressParts.push(result.region);
-        }
-        
-        // Add postcode at the end for clarity
-        if (result.postcode) {
-          addressParts.push(result.postcode);
-        }
-        
-        const fullAddress = addressParts.join(", ");
-        
-        if (field === 'from') {
-          form.setValue("fromLat", result.latitude);
-          form.setValue("fromLng", result.longitude);
-          form.setValue("fromLocation", fullAddress);
-        } else {
-          form.setValue("toLat", result.latitude);
-          form.setValue("toLng", result.longitude);
-          form.setValue("toLocation", fullAddress);
-        }
-        
-        toast({
-          title: "Location Found",
-          description: `Address resolved: ${fullAddress}`,
-        });
+      if (field === 'from') {
+        form.setValue("fromLat", data.latitude);
+        form.setValue("fromLng", data.longitude);
+        form.setValue("fromLocation", data.address);
       } else {
-        throw new Error("Invalid postcode data received");
+        form.setValue("toLat", data.latitude);
+        form.setValue("toLng", data.longitude);
+        form.setValue("toLocation", data.address);
       }
+      
+      toast({
+        title: "Location Found",
+        description: `Address resolved: ${data.address}`,
+      });
     } catch (error) {
       // Only show toast if dialog is still open (prevents stale errors)
       if (open) {

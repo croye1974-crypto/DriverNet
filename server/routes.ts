@@ -153,6 +153,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/lookup-postcode - Proxy for postcodes.io to avoid CORS issues
+  app.post("/api/lookup-postcode", async (req, res) => {
+    try {
+      const schema = z.object({
+        postcode: z.string().min(1),
+      });
+
+      const { postcode } = schema.parse(req.body);
+      
+      // Clean the postcode (remove spaces, uppercase)
+      const cleanPostcode = postcode.replace(/\s/g, "").toUpperCase();
+      
+      // Call postcodes.io API from the backend (no CORS issues)
+      const response = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ error: "Postcode not found" });
+        }
+        return res.status(response.status).json({ error: "Failed to lookup postcode" });
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 200 && data.result) {
+        const result = data.result;
+        
+        // Build a complete address from available data
+        const addressParts: string[] = [];
+        
+        // Add ward if it's different from district
+        if (result.admin_ward && result.admin_ward !== result.admin_district) {
+          addressParts.push(result.admin_ward);
+        }
+        
+        // Add district
+        if (result.admin_district) {
+          addressParts.push(result.admin_district);
+        }
+        
+        // Add county if available and different from district
+        if (result.admin_county && result.admin_county !== result.admin_district) {
+          addressParts.push(result.admin_county);
+        }
+        
+        // Add region
+        if (result.region) {
+          addressParts.push(result.region);
+        }
+        
+        // Add postcode at the end
+        if (result.postcode) {
+          addressParts.push(result.postcode);
+        }
+        
+        res.json({
+          latitude: result.latitude,
+          longitude: result.longitude,
+          address: addressParts.join(", "),
+          postcode: result.postcode,
+        });
+      } else {
+        res.status(500).json({ error: "Invalid postcode data received" });
+      }
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid postcode format", details: error.errors });
+      }
+      console.error("Postcode lookup error:", error);
+      res.status(500).json({ error: "Failed to lookup postcode" });
+    }
+  });
+
   // AI Routing Endpoints
   
   // POST /api/ai/plan-route - Optimize multi-stop route with ETA predictions
