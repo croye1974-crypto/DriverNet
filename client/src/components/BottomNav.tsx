@@ -1,9 +1,9 @@
-import { MapPin, Calendar, MessageCircle, User } from "lucide-react";
+import { MapPin, Calendar, MessageCircle, User, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface BottomNavProps {
-  activeTab: "find" | "schedule" | "messages" | "profile";
-  onTabChange: (tab: "find" | "schedule" | "messages" | "profile") => void;
+  activeTab: "find" | "schedule" | "ai" | "messages" | "profile";
+  onTabChange: (tab: "find" | "schedule" | "ai" | "messages" | "profile") => void;
   unreadMessages?: number;
 }
 
@@ -15,6 +15,7 @@ export default function BottomNav({
   const tabs = [
     { id: "find" as const, icon: MapPin, label: "Map" },
     { id: "schedule" as const, icon: Calendar, label: "Schedule" },
+    { id: "ai" as const, icon: Sparkles, label: "AI Route" },
     { id: "messages" as const, icon: MessageCircle, label: "Messages" },
     { id: "profile" as const, icon: User, label: "Profile" },
   ];

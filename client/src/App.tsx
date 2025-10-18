@@ -10,6 +10,7 @@ import FindLifts from "@/pages/FindLifts";
 import Schedule from "@/pages/Schedule";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
+import AIRoutePlanner from "@/pages/AIRoutePlanner";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoUrl from "@assets/image_1760603053099.png";
@@ -30,7 +31,7 @@ interface Conversation {
 }
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<"find" | "schedule" | "messages" | "profile">("schedule");
+  const [activeTab, setActiveTab] = useState<"find" | "schedule" | "messages" | "profile" | "ai">("schedule");
   const currentUserId = "user-1"; // Mock - will be replaced with real auth
 
   // Fetch current user's last location for proximity notifications
@@ -53,6 +54,8 @@ function AppContent() {
         return <FindLifts />;
       case "schedule":
         return <Schedule />;
+      case "ai":
+        return <AIRoutePlanner />;
       case "messages":
         return <Messages />;
       case "profile":
