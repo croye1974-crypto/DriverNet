@@ -27,10 +27,26 @@ export function estimateJourneyTime(
   fromLng: number,
   toLat: number,
   toLng: number,
-  averageSpeedMph: number = 50
+  averageSpeedMph?: number
 ): number {
   const distanceMiles = calculateDistance(fromLat, fromLng, toLat, toLng);
-  const timeHours = distanceMiles / averageSpeedMph;
+  
+  // Smart speed estimation based on distance for UK driving conditions
+  // Short trips (<15 miles) are likely urban with heavy traffic
+  // Medium trips (15-40 miles) mix of urban/suburban
+  // Long trips (>40 miles) include motorways but still conservative
+  let speedMph = averageSpeedMph;
+  if (!speedMph) {
+    if (distanceMiles < 15) {
+      speedMph = 20; // Urban: London, Birmingham, Manchester traffic
+    } else if (distanceMiles < 40) {
+      speedMph = 30; // Mixed urban/suburban
+    } else {
+      speedMph = 40; // Longer routes with motorway portions
+    }
+  }
+  
+  const timeHours = distanceMiles / speedMph;
   const timeMinutes = Math.ceil(timeHours * 60);
   return Math.max(1, timeMinutes);
 }
