@@ -153,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/lookup-postcode - Proxy for postcodes.io to avoid CORS issues
+  // POST /api/lookup-postcode - Backend proxy for postcodes.io to avoid CORS issues on deployed apps
   app.post("/api/lookup-postcode", async (req, res) => {
     try {
       const schema = z.object({
