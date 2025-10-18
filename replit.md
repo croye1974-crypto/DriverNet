@@ -172,4 +172,22 @@ The application features clear separation between frontend, backend, and shared 
 - Bottom Navigation: "AI Route" tab with Sparkles icon positioned between Schedule and Messages
 - Error Handling: Comprehensive null guards, response validation, descriptive error messages
 - Distance Units: All calculations in miles (UK standard)
+- Data Access Pattern: Uses URL-based user identification (same as Schedule/Profile pages)
+  - Fetches user: `/api/users/user-1`
+  - Fetches schedules: `/api/schedules/user/user-1`
+  - Filters to find schedule for selected date
+  - Fetches jobs: `/api/jobs/schedule/{scheduleId}`
+  - No session authentication required (eliminates 401 errors)
 - Impact: Drivers can optimize complex multi-stop routes, identify high-density areas for lift sharing, and plan strategic meet-up windows
+
+### AI Route Planner Bug Fix (October 2025)
+- Issue: AI Route Planner showed "Nothing to optimise" despite jobs being present
+- Root Cause: Original implementation used session-based authentication (`/api/user`, `/api/jobs?date={date}`) which failed in some contexts
+- Solution: Refactored to use same URL-based pattern as Schedule and Profile pages
+- Changes:
+  - Added `currentUserId = "user-1"` mock constant (consistent with other pages)
+  - User query: `/api/user` → `/api/users/user-1`
+  - Jobs query: `/api/jobs?date={date}` → `/api/schedules/user/user-1` + `/api/jobs/schedule/{scheduleId}`
+  - Added debug logging for user, schedules, currentSchedule, jobs
+- Verification: End-to-end test with 2 jobs (Manchester→Liverpool, Liverpool→Birmingham) successfully optimized route showing 109.8 miles, 2h 25m drive time
+- Impact: AI Route Planner now works reliably in all contexts (browser, Playwright tests, PWA mode)
