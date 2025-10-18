@@ -186,6 +186,11 @@ export default function Profile() {
                 <Badge variant="secondary" className="font-mono" data-testid="text-call-sign">
                   {user?.callSign || 'JS1234'}
                 </Badge>
+                {user?.subscriptionStatus === 'active' ? (
+                  <Badge variant="default" className="text-xs">Pro</Badge>
+                ) : (
+                  <Badge variant="destructive" className="text-xs">Free</Badge>
+                )}
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -234,7 +239,7 @@ export default function Profile() {
             <div className="text-xs text-muted-foreground">Points</div>
           </Card>
           <Card className="p-4 text-center">
-            <Target className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <Target className={`h-6 w-6 mx-auto mb-2 ${(stats?.punctualityScore || 0) >= 80 ? 'text-primary' : 'text-accent'}`} />
             <div className="text-xl font-bold" data-testid="text-stat-punctuality">{Math.round(stats?.punctualityScore || 0)}%</div>
             <div className="text-xs text-muted-foreground">On-Time</div>
           </Card>

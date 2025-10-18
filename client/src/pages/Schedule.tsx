@@ -288,8 +288,15 @@ export default function Schedule() {
           </div>
         )}
 
-        <div className="space-y-2">
-          {sortedJobs.map((job, index) => (
+        {!schedulesLoading && !schedulesFetching && !isLoading && !jobsError && sortedJobs.length > 0 && (
+          <>
+            {/* Blue Section Header */}
+            <div className="bg-primary p-3 rounded-lg shadow-sm -mx-4 px-7">
+              <h2 className="text-primary-foreground font-semibold text-base">Today's Delivery Jobs ({sortedJobs.length})</h2>
+            </div>
+            
+            <div className="space-y-2 mt-3">
+              {sortedJobs.map((job, index) => (
             <Card key={job.id} className="p-4" data-testid={`job-card-${job.id}`}>
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
@@ -389,7 +396,9 @@ export default function Schedule() {
               </div>
             </Card>
           ))}
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {currentSchedule && (

@@ -17,8 +17,8 @@
 **Light Mode:**
 - Background: 214 32% 91% (soft blue-grey background)
 - Surface/Card: 0 0% 100% (pure white cards for maximum contrast)
-- Primary Blue: 217 91% 60% (vibrant British blue - #3B82F6)
-- Accent Red: 0 84% 60% (bold red for highlights - #F85149)
+- Primary Blue: 217 91% 48% (vibrant British blue - WCAG AA compliant)
+- Accent Red: 0 84% 48% (bold red for highlights - WCAG AA compliant)
 - Text Primary: 222 47% 11% (deep navy, not black)
 - Text Secondary: 215 16% 47% (blue-grey)
 - Text Tertiary: 214 14% 66% (light blue-grey)
@@ -30,8 +30,8 @@
 **Dark Mode:**
 - Background: 222 47% 11% (deep navy)
 - Surface/Card: 217 33% 17% (dark blue-grey cards)
-- Primary Blue: 217 91% 70%
-- Accent Red: 0 84% 65%
+- Primary Blue: 217 91% 60%
+- Accent Red: 0 84% 55%
 - Text Primary: 210 20% 98%
 - Text Secondary: 214 14% 70%
 - Text Tertiary: 214 14% 55%

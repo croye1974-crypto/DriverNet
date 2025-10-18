@@ -290,24 +290,35 @@ export default function FindLifts() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="offers" className="flex-1 overflow-auto p-4 space-y-2 mt-0">
-            {mockDrivers.map((driver) => (
-              <DriverCard
-                key={driver.id}
-                {...driver}
-                onRequestLift={handleRequestLift}
-                isRequested={requestedLifts.has(driver.id)}
-              />
-            ))}
+          <TabsContent value="offers" className="flex-1 overflow-auto mt-0">
+            {/* Blue Section Header */}
+            <div className="bg-primary p-3 sticky top-0 z-10 shadow-sm">
+              <h2 className="text-primary-foreground font-semibold text-base">Available Lift Offers</h2>
+            </div>
+            <div className="p-4 space-y-2">
+              {mockDrivers.map((driver) => (
+                <DriverCard
+                  key={driver.id}
+                  {...driver}
+                  onRequestLift={handleRequestLift}
+                  isRequested={requestedLifts.has(driver.id)}
+                />
+              ))}
+            </div>
           </TabsContent>
 
-          <TabsContent value="requests" className="flex-1 overflow-auto p-4 space-y-2 mt-0">
-            {requestsLoading ? (
-              <div className="text-center text-muted-foreground py-8">Loading requests...</div>
-            ) : liftRequests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">No lift requests available</div>
-            ) : (
-              liftRequests.map((request) => {
+          <TabsContent value="requests" className="flex-1 overflow-auto mt-0">
+            {/* Red Section Header */}
+            <div className="bg-accent p-3 sticky top-0 z-10 shadow-sm">
+              <h2 className="text-accent-foreground font-semibold text-base">Lift Requests</h2>
+            </div>
+            <div className="p-4 space-y-2">
+              {requestsLoading ? (
+                <div className="text-center text-muted-foreground py-8">Loading requests...</div>
+              ) : liftRequests.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">No lift requests available</div>
+              ) : (
+                liftRequests.map((request) => {
                 const requestedDate = new Date(request.requestedTime);
                 const createdDate = request.createdAt ? new Date(request.createdAt) : null;
                 
@@ -335,6 +346,7 @@ export default function FindLifts() {
                 );
               })
             )}
+            </div>
           </TabsContent>
         </Tabs>
       )}
