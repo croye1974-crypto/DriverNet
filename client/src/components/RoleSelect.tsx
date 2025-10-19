@@ -1,8 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Users, Truck } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/image_1760603053099.png";
 
 interface RoleSelectProps {
@@ -11,42 +8,32 @@ interface RoleSelectProps {
 }
 
 export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) {
-  const { toast } = useToast();
-  
-  // Log immediately when component mounts to verify it's rendering
   console.log("🟣 RoleSelect component mounted. UserId:", userId);
 
-  const selectRole = async (role: "driver" | "loader") => {
+  const selectRole = async (type: "driver" | "loader") => {
     try {
-      console.log("🔴 BUTTON CLICKED - Starting selectRole function");
-      console.log("🔴 Role:", role);
-      console.log("🔴 UserId:", userId);
-      console.log("🔴 About to call apiRequest...");
+      console.log("🔵 DRIVER BUTTON CLICKED", type);
       
-      const response = await apiRequest("POST", `/api/users/${userId}/driver-type`, {
-        driverType: role,
+      // Make the API call to save the driver type
+      const res = await fetch(`/api/users/${userId}/driver-type`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverType: type }),
       });
       
-      console.log("🟢 API request successful:", response);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Failed to save role');
+      }
       
-      // Invalidate user query to refetch updated driver type from backend
-      queryClient.invalidateQueries({ queryKey: ["/api/users", userId] });
+      console.log("✅ POST /api/users/user-1/driver-type 200");
+      alert(`Saved role: ${type}`);
       
-      localStorage.setItem("driverType", role);
-      onRoleSelected(role);
-      
-      console.log("🟢 Role selection complete");
-    } catch (error) {
-      console.error("🔴 ERROR in selectRole:", error);
-      console.error("🔴 Error type:", error instanceof Error ? "Error object" : typeof error);
-      console.error("🔴 Error message:", error instanceof Error ? error.message : String(error));
-      console.error("🔴 Error stack:", error instanceof Error ? error.stack : "No stack");
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to set driver type. Please try again.",
-        variant: "destructive",
-      });
+      // Reload the page to show the Map screen
+      window.location.reload();
+    } catch (e: any) {
+      console.error("❌ Failed to save role", e);
+      alert('Failed to save role: ' + (e?.message || 'Unknown error'));
     }
   };
 
