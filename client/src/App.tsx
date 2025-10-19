@@ -43,12 +43,23 @@ function AppContent() {
     retry: 1,
   });
 
+  // Debug logging
+  useEffect(() => {
+    console.log("🔵 App.tsx - currentUser data:", currentUser);
+    console.log("🔵 App.tsx - currentUser?.driverType:", currentUser?.driverType);
+    console.log("🔵 App.tsx - driverType state:", driverType);
+  }, [currentUser, driverType]);
+
   // Sync driverType from backend to component state and localStorage cache
   useEffect(() => {
+    console.log("🟢 App.tsx - useEffect triggered, currentUser:", currentUser);
     if (currentUser?.driverType) {
       const type = currentUser.driverType as "driver" | "loader";
+      console.log("🟢 App.tsx - Setting driverType to:", type);
       setDriverType(type);
       localStorage.setItem("driverType", type); // Cache for faster subsequent loads
+    } else {
+      console.log("🔴 App.tsx - NO driverType in currentUser!");
     }
   }, [currentUser]);
 

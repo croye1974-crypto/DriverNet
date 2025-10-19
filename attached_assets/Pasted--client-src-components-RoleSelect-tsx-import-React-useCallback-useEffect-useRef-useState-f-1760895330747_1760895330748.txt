@@ -1,0 +1,119 @@
+// client/src/components/RoleSelect.tsx
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+type DriverType = 'driver' | 'low_loader';
+const USER_ID = 'user-1';
+
+// Tiny API helper (adds no-cache to avoid stale proxies)
+async function setDriverType(userId: string, driverType: DriverType) {
+  const res = await fetch(`/api/users/${userId}/driver-type`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({ driverType }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+const RoleSelect: React.FC = () => {
+  const [busy, setBusy] = useState<DriverType | null>(null);
+  const [msg, setMsg] = useState<string>('');
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Primary React handler
+  const onPick = useCallback(async (type: DriverType) => {
+    try {
+      setMsg('');
+      setBusy(type);
+      console.log('🔵 BUTTON CLICKED ->', type);
+      const r = await setDriverType(USER_ID, type);
+      console.log('✅ POST ok', r);
+      setMsg(`Saved role: ${type === 'driver' ? 'Individual Driver' : 'Low-Loader Operator'}`);
+    } catch (e: any) {
+      console.error('❌ POST failed', e);
+      setMsg('Failed: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  // Safety net: if React handlers fail to bind (hydration/cache issues),
+  // this DOM-level listener still dispatches the action.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const handler = (ev: Event) => {
+      const t = ev.target as HTMLElement | null;
+      const btn = t?.closest<HTMLButtonElement>('[data-role-pick]');
+      if (!btn) return;
+      const val = btn.getAttribute('data-role-pick') as DriverType | null;
+      if (!val) return;
+      ev.preventDefault();
+      onPick(val);
+    };
+    el.addEventListener('click', handler);
+    return () => el.removeEventListener('click', handler);
+  }, [onPick]);
+
+  return (
+    <div ref={rootRef} style={{ display: 'grid', gap: 12 }}>
+      <h3 style={{ margin: 0 }}>Choose your role</h3>
+
+      <button
+        type="button"
+        data-role-pick="driver"
+        onClick={() => onPick('driver')}
+        disabled={busy === 'driver'}
+        style={{
+          padding: '12px 14px',
+          borderRadius: 12,
+          border: '1px solid #d1d1d6',
+          background: '#1e88e5',
+          color: '#fff',
+          fontWeight: 600,
+        }}
+      >
+        {busy === 'driver' ? 'Saving…' : 'Individual Driver'}
+      </button>
+
+      <button
+        type="button"
+        data-role-pick="low_loader"
+        onClick={() => onPick('low_loader')}
+        disabled={busy === 'low_loader'}
+        style={{
+          padding: '12px 14px',
+          borderRadius: 12,
+          border: '1px solid #d1d1d6',
+          background: '#e53935',
+          color: '#fff',
+          fontWeight: 600,
+        }}
+      >
+        {busy === 'low_loader' ? 'Saving…' : 'Low-Loader Operator'}
+      </button>
+
+      {msg && (
+        <div
+          style={{
+            border: '1px solid #cdeccd',
+            background: '#eefaf0',
+            color: '#064',
+            padding: '8px 10px',
+            borderRadius: 10,
+          }}
+        >
+          {msg}
+        </div>
+      )}
+
+      <p style={{ color: '#666', fontSize: 13, margin: 0 }}>
+        Tip: if buttons ever stop working on a hot-reload, hard refresh the page. This component
+        also includes a fallback click listener to survive cache/hydration issues.
+      </p>
+    </div>
+  );
+};
+
+export default RoleSelect;
