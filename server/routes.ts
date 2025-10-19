@@ -1507,13 +1507,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/users/:userId/driver-type - Update user driver type (driver or loader)
   app.post("/api/users/:userId/driver-type", async (req, res) => {
     try {
+      console.log("🔵 Received POST /api/users/:userId/driver-type");
+      console.log("🔵 Request params:", req.params);
+      console.log("🔵 Request body:", req.body);
+      
       const { userId } = req.params;
       const schema = z.object({
         driverType: z.enum(["driver", "loader"]),
       });
 
       const { driverType } = schema.parse(req.body);
+      console.log("🔵 Validated driverType:", driverType);
+      
       const user = await storage.updateUserDriverType(userId, driverType);
+      console.log("🔵 Updated user:", user ? `${user.id} (${user.driverType})` : "NOT FOUND");
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -1522,9 +1529,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("🔴 Validation error:", error.errors);
         return res.status(400).json({ error: "Invalid input", details: error.errors });
       }
-      console.error("Update driver type error:", error);
+      console.error("🔴 Update driver type error:", error);
       res.status(500).json({ error: "Failed to update driver type" });
     }
   });
