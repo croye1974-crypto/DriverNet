@@ -67,7 +67,8 @@ function AppContent() {
       <div className="h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading user data...</p>
+          <p className="text-xs text-muted-foreground mt-2">DEBUG: Fetching from API...</p>
         </div>
       </div>
     );
@@ -76,13 +77,18 @@ function AppContent() {
   // Show role selection if query loaded but no driver type is set
   if (!userLoading && !driverType) {
     return (
-      <RoleSelect
-        userId={currentUserId}
-        onRoleSelected={(type) => {
-          // Invalidate query to refetch user data after role selection
-          queryClient.invalidateQueries({ queryKey: ["/api/users", currentUserId] });
-        }}
-      />
+      <div>
+        <div className="bg-yellow-500 text-black p-2 text-xs">
+          DEBUG: No driverType found. User: {currentUserId}
+        </div>
+        <RoleSelect
+          userId={currentUserId}
+          onRoleSelected={(type) => {
+            // Invalidate query to refetch user data after role selection
+            queryClient.invalidateQueries({ queryKey: ["/api/users", currentUserId] });
+          }}
+        />
+      </div>
     );
   }
 
@@ -130,6 +136,9 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      <div className="bg-green-500 text-white p-1 text-xs text-center">
+        DEBUG: Map page loaded. Driver type: {driverType}
+      </div>
       <header className="flex items-center justify-between py-2 px-4 bg-card border-b">
         <div className="overflow-hidden -my-1">
           <img 
