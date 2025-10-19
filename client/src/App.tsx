@@ -7,11 +7,11 @@ import BottomNav from "@/components/BottomNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import DriverNotifications from "@/components/DriverNotifications";
 import RoleSelect from "@/components/RoleSelect";
-import FindLifts from "@/pages/FindLifts";
-import Schedule from "@/pages/Schedule";
-import Messages from "@/pages/Messages";
+import MapPage from "@/pages/MapPage";
+import PostPage from "@/pages/PostPage";
+import MatchesPage from "@/pages/MatchesPage";
+import InboxPage from "@/pages/InboxPage";
 import Profile from "@/pages/Profile";
-import AIRoutePlanner from "@/pages/AIRoutePlanner";
 import LoaderDashboard from "@/pages/LoaderDashboard";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ interface Conversation {
 }
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<"find" | "schedule" | "messages" | "profile" | "ai">("schedule");
+  const [activeTab, setActiveTab] = useState<"map" | "post" | "matches" | "inbox" | "profile">("map");
   const [driverType, setDriverType] = useState<"driver" | "loader" | null>(null);
   const currentUserId = "user-1"; // Mock - will be replaced with real auth
 
@@ -109,21 +109,21 @@ function AppContent() {
     );
   }
 
-  // Driver interface (existing functionality)
+  // Driver interface (new unified structure)
   const renderPage = () => {
     switch (activeTab) {
-      case "find":
-        return <FindLifts />;
-      case "schedule":
-        return <Schedule />;
-      case "ai":
-        return <AIRoutePlanner />;
-      case "messages":
-        return <Messages />;
+      case "map":
+        return <MapPage />;
+      case "post":
+        return <PostPage />;
+      case "matches":
+        return <MatchesPage />;
+      case "inbox":
+        return <InboxPage />;
       case "profile":
         return <Profile />;
       default:
-        return <FindLifts />;
+        return <MapPage />;
     }
   };
 

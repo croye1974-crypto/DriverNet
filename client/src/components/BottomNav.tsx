@@ -1,9 +1,9 @@
-import { MapPin, Calendar, MessageCircle, User, Sparkles } from "lucide-react";
+import { MapPin, PlusCircle, Users, MessageCircle, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface BottomNavProps {
-  activeTab: "find" | "schedule" | "ai" | "messages" | "profile";
-  onTabChange: (tab: "find" | "schedule" | "ai" | "messages" | "profile") => void;
+  activeTab: "map" | "post" | "matches" | "inbox" | "profile";
+  onTabChange: (tab: "map" | "post" | "matches" | "inbox" | "profile") => void;
   unreadMessages?: number;
 }
 
@@ -13,10 +13,10 @@ export default function BottomNav({
   unreadMessages = 0,
 }: BottomNavProps) {
   const tabs = [
-    { id: "find" as const, icon: MapPin, label: "Map" },
-    { id: "schedule" as const, icon: Calendar, label: "Schedule" },
-    { id: "ai" as const, icon: Sparkles, label: "AI Route" },
-    { id: "messages" as const, icon: MessageCircle, label: "Messages" },
+    { id: "map" as const, icon: MapPin, label: "Map" },
+    { id: "post" as const, icon: PlusCircle, label: "Post" },
+    { id: "matches" as const, icon: Users, label: "Matches" },
+    { id: "inbox" as const, icon: MessageCircle, label: "Inbox" },
     { id: "profile" as const, icon: User, label: "Profile" },
   ];
 
@@ -37,7 +37,7 @@ export default function BottomNav({
             >
               <div className="relative">
                 <Icon className="h-6 w-6" />
-                {tab.id === "messages" && unreadMessages > 0 && (
+                {tab.id === "inbox" && unreadMessages > 0 && (
                   <Badge
                     variant="destructive"
                     className="absolute -top-1 -right-2 h-4 min-w-[16px] px-1 py-0 text-[10px] leading-4 rounded-full flex items-center justify-center"

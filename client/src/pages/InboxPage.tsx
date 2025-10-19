@@ -18,7 +18,7 @@ interface Conversation {
   unreadCount: number;
 }
 
-export default function Messages() {
+export default function InboxPage() {
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
