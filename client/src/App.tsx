@@ -34,8 +34,6 @@ interface Conversation {
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<"map" | "post" | "matches" | "inbox" | "profile">("map");
-  const [driverType, setDriverType] = useState<"driver" | "loader" | null>(null);
-  const [renderKey, setRenderKey] = useState(0); // Force re-render when needed
   const currentUserId = "user-1"; // Mock - will be replaced with real auth
 
   // Fetch user data from backend to get the authoritative driverType
@@ -44,43 +42,20 @@ function AppContent() {
     retry: 1,
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log("🔵 App.tsx - currentUser data:", currentUser);
-    console.log("🔵 App.tsx - currentUser?.driverType:", currentUser?.driverType);
-    console.log("🔵 App.tsx - driverType state:", driverType);
-  }, [currentUser, driverType]);
-
-  // Sync driverType from backend to component state and localStorage cache
-  useEffect(() => {
-    console.log("🟢 App.tsx - useEffect triggered, currentUser:", currentUser);
-    if (currentUser?.driverType) {
-      const type = currentUser.driverType as "driver" | "loader";
-      console.log("🟢 App.tsx - Setting driverType to:", type);
-      
-      // Use setTimeout to ensure state update happens after render
-      setTimeout(() => {
-        setDriverType(type);
-        setRenderKey(prev => prev + 1); // Force re-render
-        localStorage.setItem("driverType", type); // Cache for faster subsequent loads
-        console.log("✅ driverType state updated asynchronously");
-      }, 0);
-    } else {
-      console.log("🔴 App.tsx - NO driverType in currentUser!");
-    }
-  }, [currentUser]);
+  // Extract driverType directly from query data (no local state needed)
+  const driverType = currentUser?.driverType as "driver" | "loader" | undefined;
 
   // Fetch current user's last location for proximity notifications
   const { data: lastLocation } = useQuery<LastLocation | null>({
     queryKey: ["/api/users", currentUserId, "last-location"],
     refetchInterval: 60000, // Refresh every minute
-    enabled: driverType !== null, // Only fetch if role is selected
+    enabled: !!driverType, // Only fetch if role is selected
   });
 
   // Fetch conversations to calculate unread count
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations", currentUserId],
-    enabled: driverType !== null, // Only fetch if role is selected
+    enabled: !!driverType, // Only fetch if role is selected
   });
 
   // Calculate total unread messages
@@ -98,9 +73,17 @@ function AppContent() {
     );
   }
 
-  // Show role selection if no driver type is set
-  if (driverType === null) {
-    return <RoleSelect key={renderKey} userId={currentUserId} onRoleSelected={setDriverType} />;
+  // Show role selection if query loaded but no driver type is set
+  if (!userLoading && !driverType) {
+    return (
+      <RoleSelect
+        userId={currentUserId}
+        onRoleSelected={(type) => {
+          // Invalidate query to refetch user data after role selection
+          queryClient.invalidateQueries({ queryKey: ["/api/users", currentUserId] });
+        }}
+      />
+    );
   }
 
   // If user is a loader, show loader dashboard
@@ -184,21 +167,10 @@ function AppContent() {
 }
 
 function App() {
-  const [appKey, setAppKey] = useState(0);
-  
-  // Force complete re-render when needed
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setAppKey(prev => prev + 1);
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppContent key={appKey} />
+        <AppContent />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
