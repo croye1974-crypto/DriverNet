@@ -35,6 +35,7 @@ interface Conversation {
 function AppContent() {
   const [activeTab, setActiveTab] = useState<"map" | "post" | "matches" | "inbox" | "profile">("map");
   const [driverType, setDriverType] = useState<"driver" | "loader" | null>(null);
+  const [renderKey, setRenderKey] = useState(0); // Force re-render when needed
   const currentUserId = "user-1"; // Mock - will be replaced with real auth
 
   // Fetch user data from backend to get the authoritative driverType
@@ -57,6 +58,7 @@ function AppContent() {
       const type = currentUser.driverType as "driver" | "loader";
       console.log("🟢 App.tsx - Setting driverType to:", type);
       setDriverType(type);
+      setRenderKey(prev => prev + 1); // Force re-render
       localStorage.setItem("driverType", type); // Cache for faster subsequent loads
     } else {
       console.log("🔴 App.tsx - NO driverType in currentUser!");
@@ -93,7 +95,7 @@ function AppContent() {
 
   // Show role selection if no driver type is set
   if (driverType === null) {
-    return <RoleSelect userId={currentUserId} onRoleSelected={setDriverType} />;
+    return <RoleSelect key={renderKey} userId={currentUserId} onRoleSelected={setDriverType} />;
   }
 
   // If user is a loader, show loader dashboard
