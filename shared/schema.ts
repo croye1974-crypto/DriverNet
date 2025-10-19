@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   avatar: text("avatar"),
   role: text("role").notNull().default("user"), // user, moderator, admin
+  driverType: text("driver_type").notNull().default("driver"), // driver, loader
   rating: real("rating").default(0),
   totalTrips: integer("total_trips").default(0),
   verified: boolean("verified").default(false),
@@ -169,6 +170,49 @@ export const blocks = pgTable("blocks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Check-ins for real-time availability (driver or loader)
+export const checkIns = pgTable("check_ins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  driverType: text("driver_type").notNull(), // driver, loader
+  lat: real("lat"),
+  lng: real("lng"),
+  w3w: text("w3w"), // What3Words location
+  fromTime: timestamp("from_time").notNull(),
+  toTime: timestamp("to_time").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Loader space advertisements for flatbed/low-loader operators
+export const loaderSpaces = pgTable("loader_spaces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("available"), // available, booked, completed
+  capacityKg: integer("capacity_kg"),
+  lengthCm: integer("length_cm"),
+  widthCm: integer("width_cm"),
+  heightCm: integer("height_cm"),
+  acceptsCars: boolean("accepts_cars").default(true),
+  acceptsVans: boolean("accepts_vans").default(false),
+  acceptsBikes: boolean("accepts_bikes").default(false),
+  acceptsNonRunners: boolean("accepts_nonrunners").default(false),
+  strapsAvailable: boolean("straps_available").default(true),
+  winchAvailable: boolean("winch_available").default(false),
+  originLocation: text("origin_location"),
+  originLat: real("origin_lat"),
+  originLng: real("origin_lng"),
+  originW3W: text("origin_w3w"),
+  destLocation: text("dest_location"),
+  destLat: real("dest_lat"),
+  destLng: real("dest_lng"),
+  destW3W: text("dest_w3w"),
+  departAfter: timestamp("depart_after"),
+  arriveBefore: timestamp("arrive_before"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -259,6 +303,34 @@ export const insertBlockSchema = createInsertSchema(blocks).omit({
   createdAt: true,
 });
 
+export const insertCheckInSchema = createInsertSchema(checkIns).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  fromTime: z.union([
+    z.date(),
+    z.string().min(1, "Start time is required").pipe(z.coerce.date())
+  ]),
+  toTime: z.union([
+    z.date(),
+    z.string().min(1, "End time is required").pipe(z.coerce.date())
+  ]),
+});
+
+export const insertLoaderSpaceSchema = createInsertSchema(loaderSpaces).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  departAfter: z.union([
+    z.date(),
+    z.string().pipe(z.coerce.date())
+  ]).optional(),
+  arriveBefore: z.union([
+    z.date(),
+    z.string().pipe(z.coerce.date())
+  ]).optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type SelectUser = typeof users.$inferSelect;
@@ -295,3 +367,9 @@ export type Report = typeof reports.$inferSelect;
 
 export type InsertBlock = z.infer<typeof insertBlockSchema>;
 export type Block = typeof blocks.$inferSelect;
+
+export type InsertCheckIn = z.infer<typeof insertCheckInSchema>;
+export type CheckIn = typeof checkIns.$inferSelect;
+
+export type InsertLoaderSpace = z.infer<typeof insertLoaderSpaceSchema>;
+export type LoaderSpace = typeof loaderSpaces.$inferSelect;

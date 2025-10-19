@@ -11,6 +11,8 @@ import {
   type UserBadge, type InsertUserBadge,
   type Report, type InsertReport,
   type Block, type InsertBlock,
+  type CheckIn, type InsertCheckIn,
+  type LoaderSpace, type InsertLoaderSpace,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -120,6 +122,25 @@ export interface IStorage {
   getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]>;
   awardBadge(userId: string, badgeId: string): Promise<UserBadge | null>;
   checkAndAwardBadges(userId: string): Promise<UserBadge[]>;
+  
+  // Driver Type (role selection)
+  updateUserDriverType(userId: string, driverType: string): Promise<User | undefined>;
+  
+  // Check-ins
+  createCheckIn(checkIn: InsertCheckIn): Promise<CheckIn>;
+  getCheckIn(id: string): Promise<CheckIn | undefined>;
+  getCheckInsByUserId(userId: string): Promise<CheckIn[]>;
+  getActiveCheckIns(): Promise<CheckIn[]>;
+  getNearbyCheckIns(lat: number, lng: number, maxDistanceMiles: number, driverType?: string): Promise<(CheckIn & { user: User, distance: number })[]>;
+  deleteCheckIn(id: string): Promise<boolean>;
+  
+  // Loader Spaces
+  createLoaderSpace(space: InsertLoaderSpace): Promise<LoaderSpace>;
+  getLoaderSpace(id: string): Promise<LoaderSpace | undefined>;
+  getLoaderSpacesByUserId(userId: string): Promise<LoaderSpace[]>;
+  getAllAvailableLoaderSpaces(): Promise<(LoaderSpace & { user: User })[]>;
+  updateLoaderSpaceStatus(id: string, status: string): Promise<LoaderSpace | undefined>;
+  deleteLoaderSpace(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -133,6 +154,8 @@ export class MemStorage implements IStorage {
   private userStats: Map<string, UserStats>;
   private badges: Map<string, Badge>;
   private userBadges: Map<string, UserBadge>;
+  private checkIns: Map<string, CheckIn>;
+  private loaderSpaces: Map<string, LoaderSpace>;
 
   constructor() {
     this.users = new Map();
@@ -145,6 +168,8 @@ export class MemStorage implements IStorage {
     this.userStats = new Map();
     this.badges = new Map();
     this.userBadges = new Map();
+    this.checkIns = new Map();
+    this.loaderSpaces = new Map();
     
     this.seedInitialData();
   }
@@ -163,9 +188,12 @@ export class MemStorage implements IStorage {
         username: 'john_driver', 
         password: hashedPassword, 
         name: 'John Smith', 
-        callSign: 'JS1234', 
+        callSign: 'JS1234',
+        email: null,
+        phone: null,
         avatar: null, 
         role: 'user',
+        driverType: 'driver',
         rating: 4.8, 
         totalTrips: 156, 
         verified: true,
@@ -180,9 +208,12 @@ export class MemStorage implements IStorage {
         username: 'sarah_delivers', 
         password: hashedPassword, 
         name: 'Sarah Johnson', 
-        callSign: 'SJ5678', 
+        callSign: 'SJ5678',
+        email: null,
+        phone: null,
         avatar: null, 
         role: 'user',
+        driverType: 'driver',
         rating: 4.9, 
         totalTrips: 203, 
         verified: true,
@@ -197,9 +228,12 @@ export class MemStorage implements IStorage {
         username: 'mike_transport', 
         password: hashedPassword, 
         name: 'Mike Williams', 
-        callSign: 'MW9012', 
+        callSign: 'MW9012',
+        email: null,
+        phone: null,
         avatar: null, 
         role: 'user',
+        driverType: 'driver',
         rating: 4.7, 
         totalTrips: 98, 
         verified: true,
@@ -214,9 +248,12 @@ export class MemStorage implements IStorage {
         username: 'emma_driver', 
         password: hashedPassword, 
         name: 'Emma Brown', 
-        callSign: 'EB3456', 
+        callSign: 'EB3456',
+        email: null,
+        phone: null,
         avatar: null, 
         role: 'moderator', // Make one demo user a moderator for testing
+        driverType: 'loader', // Make this user a loader for testing
         rating: 4.6, 
         totalTrips: 134, 
         verified: true,
@@ -1026,6 +1063,147 @@ export class MemStorage implements IStorage {
     }
     
     return awarded;
+  }
+
+  // Driver Type (role selection)
+  async updateUserDriverType(userId: string, driverType: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    
+    const updated = { ...user, driverType };
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  // Check-ins
+  async createCheckIn(checkIn: InsertCheckIn): Promise<CheckIn> {
+    const id = randomUUID();
+    const newCheckIn: CheckIn = {
+      id,
+      ...checkIn,
+      lat: checkIn.lat ?? null,
+      lng: checkIn.lng ?? null,
+      w3w: checkIn.w3w ?? null,
+      note: checkIn.note ?? null,
+      createdAt: new Date(),
+    };
+    this.checkIns.set(id, newCheckIn);
+    return newCheckIn;
+  }
+
+  async getCheckIn(id: string): Promise<CheckIn | undefined> {
+    return this.checkIns.get(id);
+  }
+
+  async getCheckInsByUserId(userId: string): Promise<CheckIn[]> {
+    return Array.from(this.checkIns.values())
+      .filter((checkIn) => checkIn.userId === userId);
+  }
+
+  async getActiveCheckIns(): Promise<CheckIn[]> {
+    const now = new Date();
+    return Array.from(this.checkIns.values())
+      .filter((checkIn) => checkIn.toTime > now);
+  }
+
+  async getNearbyCheckIns(
+    lat: number,
+    lng: number,
+    maxDistanceMiles: number,
+    driverType?: string
+  ): Promise<(CheckIn & { user: User; distance: number })[]> {
+    const now = new Date();
+    const activeCheckIns = Array.from(this.checkIns.values())
+      .filter((checkIn) => {
+        if (checkIn.toTime < now) return false;
+        if (driverType && checkIn.driverType !== driverType) return false;
+        return true;
+      });
+
+    const nearbyCheckIns = activeCheckIns
+      .map((checkIn) => {
+        if (!checkIn.lat || !checkIn.lng) return null;
+        const distance = calculateDistance(lat, lng, checkIn.lat, checkIn.lng);
+        const user = this.users.get(checkIn.userId);
+        if (!user || distance > maxDistanceMiles) return null;
+        return { ...checkIn, user, distance };
+      })
+      .filter((item): item is CheckIn & { user: User; distance: number } => item !== null);
+
+    return nearbyCheckIns.sort((a, b) => a.distance - b.distance);
+  }
+
+  async deleteCheckIn(id: string): Promise<boolean> {
+    return this.checkIns.delete(id);
+  }
+
+  // Loader Spaces
+  async createLoaderSpace(space: InsertLoaderSpace): Promise<LoaderSpace> {
+    const id = randomUUID();
+    const newSpace: LoaderSpace = {
+      id,
+      ...space,
+      status: space.status ?? 'available',
+      capacityKg: space.capacityKg ?? null,
+      lengthCm: space.lengthCm ?? null,
+      widthCm: space.widthCm ?? null,
+      heightCm: space.heightCm ?? null,
+      acceptsCars: space.acceptsCars ?? true,
+      acceptsVans: space.acceptsVans ?? false,
+      acceptsBikes: space.acceptsBikes ?? false,
+      acceptsNonRunners: space.acceptsNonRunners ?? false,
+      strapsAvailable: space.strapsAvailable ?? true,
+      winchAvailable: space.winchAvailable ?? false,
+      originLocation: space.originLocation ?? null,
+      originLat: space.originLat ?? null,
+      originLng: space.originLng ?? null,
+      originW3W: space.originW3W ?? null,
+      destLocation: space.destLocation ?? null,
+      destLat: space.destLat ?? null,
+      destLng: space.destLng ?? null,
+      destW3W: space.destW3W ?? null,
+      departAfter: space.departAfter ?? null,
+      arriveBefore: space.arriveBefore ?? null,
+      note: space.note ?? null,
+      createdAt: new Date(),
+    };
+    this.loaderSpaces.set(id, newSpace);
+    return newSpace;
+  }
+
+  async getLoaderSpace(id: string): Promise<LoaderSpace | undefined> {
+    return this.loaderSpaces.get(id);
+  }
+
+  async getLoaderSpacesByUserId(userId: string): Promise<LoaderSpace[]> {
+    return Array.from(this.loaderSpaces.values())
+      .filter((space) => space.userId === userId);
+  }
+
+  async getAllAvailableLoaderSpaces(): Promise<(LoaderSpace & { user: User })[]> {
+    const availableSpaces = Array.from(this.loaderSpaces.values())
+      .filter((space) => space.status === 'available');
+
+    return availableSpaces
+      .map((space) => {
+        const user = this.users.get(space.userId);
+        if (!user) return null;
+        return { ...space, user };
+      })
+      .filter((item): item is LoaderSpace & { user: User } => item !== null);
+  }
+
+  async updateLoaderSpaceStatus(id: string, status: string): Promise<LoaderSpace | undefined> {
+    const space = this.loaderSpaces.get(id);
+    if (!space) return undefined;
+
+    const updated = { ...space, status };
+    this.loaderSpaces.set(id, updated);
+    return updated;
+  }
+
+  async deleteLoaderSpace(id: string): Promise<boolean> {
+    return this.loaderSpaces.delete(id);
   }
 }
 

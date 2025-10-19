@@ -9,7 +9,9 @@ import {
   insertLiftRequestSchema,
   insertMessageSchema,
   insertRatingSchema,
-  updateUserProfileSchema
+  updateUserProfileSchema,
+  insertCheckInSchema,
+  insertLoaderSpaceSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import {
@@ -1488,6 +1490,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get last location error:", error);
       res.status(500).json({ error: "Failed to get last location" });
+    }
+  });
+
+  // POST /api/users/:userId/driver-type - Update user driver type (driver or loader)
+  app.post("/api/users/:userId/driver-type", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const schema = z.object({
+        driverType: z.enum(["driver", "loader"]),
+      });
+
+      const { driverType } = schema.parse(req.body);
+      const user = await storage.updateUserDriverType(userId, driverType);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Update driver type error:", error);
+      res.status(500).json({ error: "Failed to update driver type" });
+    }
+  });
+
+  // GET /api/users/:userId - Get current user
+  app.get("/api/users/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Don't send password to client
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
+  // POST /api/checkins - Create a check-in
+  app.post("/api/checkins", async (req, res) => {
+    try {
+      const validated = insertCheckInSchema.parse(req.body);
+      const checkIn = await storage.createCheckIn(validated);
+      res.json(checkIn);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Create check-in error:", error);
+      res.status(500).json({ error: "Failed to create check-in" });
+    }
+  });
+
+  // GET /api/checkins/nearby - Get nearby check-ins
+  app.get("/api/checkins/nearby", async (req, res) => {
+    try {
+      const schema = z.object({
+        lat: z.coerce.number(),
+        lng: z.coerce.number(),
+        maxDistanceMiles: z.coerce.number().optional().default(10),
+        driverType: z.enum(["driver", "loader"]).optional(),
+      });
+
+      const { lat, lng, maxDistanceMiles, driverType } = schema.parse(req.query);
+      const checkIns = await storage.getNearbyCheckIns(lat, lng, maxDistanceMiles, driverType);
+      res.json(checkIns);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+      }
+      console.error("Get nearby check-ins error:", error);
+      res.status(500).json({ error: "Failed to get nearby check-ins" });
+    }
+  });
+
+  // GET /api/checkins/active - Get all active check-ins
+  app.get("/api/checkins/active", async (_req, res) => {
+    try {
+      const checkIns = await storage.getActiveCheckIns();
+      res.json(checkIns);
+    } catch (error) {
+      console.error("Get active check-ins error:", error);
+      res.status(500).json({ error: "Failed to get active check-ins" });
+    }
+  });
+
+  // GET /api/checkins/user/:userId - Get check-ins by user
+  app.get("/api/checkins/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const checkIns = await storage.getCheckInsByUserId(userId);
+      res.json(checkIns);
+    } catch (error) {
+      console.error("Get user check-ins error:", error);
+      res.status(500).json({ error: "Failed to get user check-ins" });
+    }
+  });
+
+  // DELETE /api/checkins/:id - Delete a check-in
+  app.delete("/api/checkins/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCheckIn(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Check-in not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete check-in error:", error);
+      res.status(500).json({ error: "Failed to delete check-in" });
+    }
+  });
+
+  // POST /api/loader-spaces - Create a loader space advertisement
+  app.post("/api/loader-spaces", async (req, res) => {
+    try {
+      const validated = insertLoaderSpaceSchema.parse(req.body);
+      const space = await storage.createLoaderSpace(validated);
+      res.json(space);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Create loader space error:", error);
+      res.status(500).json({ error: "Failed to create loader space" });
+    }
+  });
+
+  // GET /api/loader-spaces/available - Get all available loader spaces
+  app.get("/api/loader-spaces/available", async (_req, res) => {
+    try {
+      const spaces = await storage.getAllAvailableLoaderSpaces();
+      res.json(spaces);
+    } catch (error) {
+      console.error("Get available loader spaces error:", error);
+      res.status(500).json({ error: "Failed to get available loader spaces" });
+    }
+  });
+
+  // GET /api/loader-spaces/user/:userId - Get loader spaces by user
+  app.get("/api/loader-spaces/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const spaces = await storage.getLoaderSpacesByUserId(userId);
+      res.json(spaces);
+    } catch (error) {
+      console.error("Get user loader spaces error:", error);
+      res.status(500).json({ error: "Failed to get user loader spaces" });
+    }
+  });
+
+  // PATCH /api/loader-spaces/:id/status - Update loader space status
+  app.patch("/api/loader-spaces/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const schema = z.object({
+        status: z.enum(["available", "booked", "completed"]),
+      });
+
+      const { status } = schema.parse(req.body);
+      const space = await storage.updateLoaderSpaceStatus(id, status);
+
+      if (!space) {
+        return res.status(404).json({ error: "Loader space not found" });
+      }
+
+      res.json(space);
+    } catch (error) {
+      console.error("Update loader space status error:", error);
+      res.status(500).json({ error: "Failed to update loader space status" });
+    }
+  });
+
+  // DELETE /api/loader-spaces/:id - Delete a loader space
+  app.delete("/api/loader-spaces/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteLoaderSpace(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Loader space not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete loader space error:", error);
+      res.status(500).json({ error: "Failed to delete loader space" });
     }
   });
 
