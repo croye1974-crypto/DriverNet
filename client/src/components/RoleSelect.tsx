@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Truck } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import logoUrl from "@assets/image_1760603053099.png";
 
 interface RoleSelectProps {
   userId: string;
@@ -35,7 +36,10 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[hsl(214,32%,91%)]">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="space-y-4">
+          <div className="flex justify-center">
+            <img src={logoUrl} alt="DriveNet" className="h-16 w-auto" />
+          </div>
           <CardTitle className="text-2xl text-center">Choose Your Role</CardTitle>
           <CardDescription className="text-center">
             How will you be using DriveNet today?

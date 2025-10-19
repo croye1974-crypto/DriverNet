@@ -91,35 +91,6 @@ export default function MapView({
       maxZoom: 19,
     }).addTo(map);
 
-    // Add legend using Control class
-    const LegendControl = L.Control.extend({
-      options: {
-        position: 'bottomleft'
-      },
-      onAdd: function() {
-        const div = L.DomUtil.create("div", "map-legend");
-        div.innerHTML = `
-          <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-family: Inter, sans-serif; font-size: 13px;">
-            <div style="font-weight: 600; margin-bottom: 8px;">Map Key</div>
-            <div style="display: flex; align-items: center; margin-bottom: 6px;">
-              <div style="width: 16px; height: 16px; background-color: #8b5cf6; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
-              <span style="font-weight: 500;">Your Location</span>
-            </div>
-            <div style="display: flex; align-items: center; margin-bottom: 6px;">
-              <div style="width: 16px; height: 16px; background-color: #3b82f6; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
-              <span>Lift Offers</span>
-            </div>
-            <div style="display: flex; align-items: center;">
-              <div style="width: 16px; height: 16px; background-color: #22c55e; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
-              <span>Lift Requests</span>
-            </div>
-          </div>
-        `;
-        return div;
-      }
-    });
-    new LegendControl().addTo(map);
-
     // Listen for zoom changes to update marker sizes
     map.on('zoomend', () => {
       setCurrentZoom(map.getZoom());
