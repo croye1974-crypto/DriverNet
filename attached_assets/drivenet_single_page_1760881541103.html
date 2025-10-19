@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DriveNet – Single Page MVP</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background: #f7f7f8; color: #111; }
+    header { position: sticky; top: 0; background: #fff; border-bottom: 1px solid #e6e6e9; padding: 10px 12px; z-index: 5; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .grow { flex: 1; }
+    select, input, textarea, button { font: inherit; padding: 10px; border: 1px solid #d1d1d6; border-radius: 10px; background: #fff; }
+    label { font-size: 13px; color: #444; margin-bottom: 6px; display: block; }
+    .container { padding: 12px; max-width: 900px; margin: 0 auto; }
+    .card { background: #fff; border: 1px solid #e6e6e9; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .hstack { display: flex; gap: 8px; }
+    .vstack { display: grid; gap: 10px; }
+    .tabs { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e6e6e9; display: grid; grid-template-columns: repeat(5, 1fr); }
+    .tab { text-align: center; padding: 10px 0; font-size: 14px; cursor: pointer; }
+    .tab.active { color: #0a7; font-weight: 600; }
+    .btn { background: #0a7; color: #fff; border: none; border-radius: 12px; padding: 10px 14px; cursor: pointer; }
+    .btn.secondary { background: #111; color: #fff; }
+    .btn.ghost { background: #fff; color: #111; border: 1px solid #d1d1d6; }
+    .pill { border-radius: 999px; padding: 8px 12px; background: #eef8f4; color: #065; font-size: 12px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; padding: 16px; z-index: 10; }
+    .modal { background: #fff; width: 100%; max-width: 640px; border-radius: 16px 16px 12px 12px; padding: 16px; }
+    .modal header { position: relative; border: none; padding: 0 0 10px 0; }
+    .modal h3 { margin: 6px 0 0 0; }
+    .close-x { position: absolute; right: 0; top: 0; background: #f1f1f4; border: none; border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+    .switch { display: inline-flex; align-items: center; gap: 8px; }
+    .muted { color: #666; font-size: 13px; }
+    .divider { height: 1px; background: #eee; margin: 6px 0 10px 0; }
+    @media (max-width: 640px) {
+      .grid2, .grid3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React via CDN for quick paste usage -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const TABS = ["Map", "Post", "Matches", "Inbox", "Profile"];
+    const ROLES = ["Driver", "Low Loader", "Lift Seeker", "Business"];
+
+    function Field({ label, children }) {
+      return (
+        <div className="vstack">
+          <label>{label}</label>
+          {children}
+        </div>
+      );
+    }
+
+    function Row2({ children }) {
+      return <div className="grid2">{children}</div>;
+    }
+
+    function Row3({ children }) {
+      return <div className="grid3">{children}</div>;
+    }
+
+    function Header({ role, setRole, onOfferLift }) {
+      return (
+        <header>
+          <div className="row">
+            <select className="grow" value={role} onChange={(e) => setRole(e.target.value)}>
+              {ROLES.map(r => <option key={r} value={r}>{r} mode</option>)}
+            </select>
+            <button className="btn" onClick={onOfferLift}>Offer lift between jobs</button>
+          </div>
+        </header>
+      );
+    }
+
+    function Tabs({ tab, setTab }) {
+      return (
+        <nav className="tabs">
+          {TABS.map(t => (
+            <div key={t} className={"tab " + (tab === t ? "active" : "")} onClick={() => setTab(t)}>
+              {t}
+            </div>
+          ))}
+        </nav>
+      );
+    }
+
+    function OfferLiftModal({ open, onClose, onSubmit }) {
+      const [form, setForm] = useState({
+        from: "", to: "", depart: "", arrive: "",
+        seats: 1, detour: 10, priceType: "Free", priceValue: "",
+        vehicle: "Hatchback", notes: "", visibility: "Everyone", repeat: "None"
+      });
+
+      if (!open) return null;
+
+      const update = (k, v) => setForm({ ...form, [k]: v });
+
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3>Offer lift between jobs</h3>
+              <button className="close-x" onClick={onClose}>Close</button>
+            </header>
+            <div className="vstack">
+              <Row2>
+                <Field label="From">
+                  <input placeholder="Search or what3words" value={form.from} onChange={e=>update("from", e.target.value)} />
+                </Field>
+                <Field label="To">
+                  <input placeholder="Search or what3words" value={form.to} onChange={e=>update("to", e.target.value)} />
+                </Field>
+              </Row2>
+              <Row2>
+                <Field label="Earliest depart">
+                  <input type="datetime-local" value={form.depart} onChange={e=>update("depart", e.target.value)} />
+                </Field>
+                <Field label="Latest arrive">
+                  <input type="datetime-local" value={form.arrive} onChange={e=>update("arrive", e.target.value)} />
+                </Field>
+              </Row2>
+              <Row3>
+                <Field label="Seats available">
+                  <input type="number" min="1" max="3" value={form.seats} onChange={e=>update("seats", e.target.value)} />
+                </Field>
+                <Field label="Willing detour (km)">
+                  <input type="number" min="0" value={form.detour} onChange={e=>update("detour", e.target.value)} />
+                </Field>
+                <Field label="Price">
+                  <div className="hstack">
+                    <select value={form.priceType} onChange={e=>update("priceType", e.target.value)}>
+                      <option>Free</option>
+                      <option>Fixed</option>
+                      <option>Tip</option>
+                    </select>
+                    {form.priceType === "Fixed" && (
+                      <input type="number" min="0" step="1" placeholder="£" value={form.priceValue} onChange={e=>update("priceValue", e.target.value)} />
+                    )}
+                  </div>
+                </Field>
+              </Row3>
+              <Row2>
+                <Field label="Vehicle type">
+                  <select value={form.vehicle} onChange={e=>update("vehicle", e.target.value)}>
+                    <option>Hatchback</option>
+                    <option>Van</option>
+                    <option>Other</option>
+                  </select>
+                </Field>
+                <Field label="Visibility">
+                  <select value={form.visibility} onChange={e=>update("visibility", e.target.value)}>
+                    <option>Everyone</option>
+                    <option>Followers</option>
+                  </select>
+                </Field>
+              </Row2>
+              <Row2>
+                <Field label="Repeat">
+                  <select value={form.repeat} onChange={e=>update("repeat", e.target.value)}>
+                    <option>None</option>
+                    <option>Weekdays</option>
+                    <option>Weekends</option>
+                    <option>Custom</option>
+                  </select>
+                </Field>
+                <Field label="Notes">
+                  <input placeholder="Anything riders should know" value={form.notes} onChange={e=>update("notes", e.target.value)} />
+                </Field>
+              </Row2>
+            </div>
+            <div className="divider"></div>
+            <div className="row" style={{justifyContent:"space-between"}}>
+              <span className="muted">Posts to the shared board and map.</span>
+              <div className="hstack">
+                <button className="btn ghost" onClick={onClose}>Cancel</button>
+                <button className="btn" onClick={() => { onSubmit(form); onClose(); }}>Post lift</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function MapScreen() {
+      return (
+        <div className="container">
+          <div className="card">
+            <div className="vstack">
+              <strong>Map placeholder</strong>
+              <span className="muted">Show offers and requests. Cluster pins for lifts and loads.</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function PostScreen({ role }) {
+      return (
+        <div className="container">
+          {role === "Driver" && <DriverPost />}
+          {role === "Low Loader" && <LowLoaderPost />}
+          {role === "Lift Seeker" && <SeekerPost />}
+          {role === "Business" && <BusinessPost />}
+        </div>
+      );
+    }
+
+    function DriverPost() {
+      const [autoOffers, setAutoOffers] = useState(true);
+      return (
+        <div className="card vstack">
+          <h3>Post availability</h3>
+          <Row2>
+            <Field label="Leg from">
+              <input placeholder="Start" />
+            </Field>
+            <Field label="Leg to">
+              <input placeholder="End" />
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Window start">
+              <input type="datetime-local" />
+            </Field>
+            <Field label="Window end">
+              <input type="datetime-local" />
+            </Field>
+          </Row2>
+          <Row3>
+            <Field label="Seats">
+              <input type="number" min="1" max="3" defaultValue={1} />
+            </Field>
+            <Field label="Detour tolerance (km)">
+              <input type="number" min="0" defaultValue={10} />
+            </Field>
+            <Field label="Price rule">
+              <select>
+                <option>Free</option>
+                <option>Fixed</option>
+                <option>Tip</option>
+              </select>
+            </Field>
+          </Row3>
+          <div className="switch">
+            <input type="checkbox" checked={autoOffers} onChange={() => setAutoOffers(!autoOffers)} />
+            <span>Auto generate lift posts</span>
+          </div>
+          <div className="row" style={{justifyContent:"flex-end"}}>
+            <button className="btn">Publish</button>
+          </div>
+        </div>
+      );
+    }
+
+    function LowLoaderPost() {
+      const [cabSeat, setCabSeat] = useState(false);
+      return (
+        <div className="card vstack">
+          <h3>Post capacity</h3>
+          <Row2>
+            <Field label="From">
+              <input placeholder="Pickup" />
+            </Field>
+            <Field label="To">
+              <input placeholder="Drop-off" />
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Date">
+              <input type="date" />
+            </Field>
+            <Field label="Price type">
+              <select>
+                <option>Quote</option>
+                <option>Fixed</option>
+              </select>
+            </Field>
+          </Row2>
+          <Row3>
+            <Field label="Length (m)">
+              <input type="number" step="0.1" />
+            </Field>
+            <Field label="Width (m)">
+              <input type="number" step="0.1" />
+            </Field>
+            <Field label="Height (m)">
+              <input type="number" step="0.1" />
+            </Field>
+          </Row3>
+          <Row2>
+            <Field label="Max weight (kg)">
+              <input type="number" />
+            </Field>
+            <Field label="Space available percent">
+              <input type="number" min="0" max="100" />
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Items allowed">
+              <select multiple>
+                <option>Running</option>
+                <option>Non running</option>
+                <option>SORN</option>
+              </select>
+            </Field>
+            <Field label="Special gear">
+              <select multiple>
+                <option>Winch</option>
+                <option>Ramps</option>
+                <option>Enclosed</option>
+              </select>
+            </Field>
+          </Row2>
+          <div className="switch">
+            <input type="checkbox" checked={cabSeat} onChange={() => setCabSeat(!cabSeat)} />
+            <span>Cab seat available</span>
+          </div>
+          <div className="row" style={{justifyContent:"flex-end"}}>
+            <button className="btn">Publish</button>
+          </div>
+        </div>
+      );
+    }
+
+    function SeekerPost() {
+      return (
+        <div className="card vstack">
+          <h3>Request a lift</h3>
+          <Row2>
+            <Field label="From">
+              <input placeholder="Pickup" />
+            </Field>
+            <Field label="To">
+              <input placeholder="Drop-off" />
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Earliest depart">
+              <input type="datetime-local" />
+            </Field>
+            <Field label="Latest arrive">
+              <input type="datetime-local" />
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Bags or kit">
+              <select>
+                <option>No</option>
+                <option>Yes</option>
+              </select>
+            </Field>
+            <Field label="Budget (max £)">
+              <input type="number" min="0" />
+            </Field>
+          </Row2>
+          <Field label="Notes">
+            <input placeholder="Anything drivers should know" />
+          </Field>
+          <div className="row" style={{justifyContent:"flex-end"}}>
+            <button className="btn">Publish</button>
+          </div>
+        </div>
+      );
+    }
+
+    function BusinessPost() {
+      return (
+        <div className="card vstack">
+          <h3>Book low loader space</h3>
+          <Row2>
+            <Field label="Pickup address">
+              <input placeholder="Address" />
+            </Field>
+            <Field label="Pickup window">
+              <input type="datetime-local" />
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Drop-off address">
+              <input placeholder="Address" />
+            </Field>
+            <Field label="Delivery window">
+              <input type="datetime-local" />
+            </Field>
+          </Row2>
+          <Row3>
+            <Field label="Make">
+              <input />
+            </Field>
+            <Field label="Model">
+              <input />
+            </Field>
+            <Field label="Reg or VIN">
+              <input />
+            </Field>
+          </Row3>
+          <Row3>
+            <Field label="Length (m)">
+              <input type="number" step="0.1" />
+            </Field>
+            <Field label="Width (m)">
+              <input type="number" step="0.1" />
+            </Field>
+            <Field label="Height (m)">
+              <input type="number" step="0.1" />
+            </Field>
+          </Row3>
+          <Row2>
+            <Field label="Weight (kg)">
+              <input type="number" />
+            </Field>
+            <Field label="Running">
+              <select>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Extras">
+              <select multiple>
+                <option>Winch needed</option>
+                <option>Ramps</option>
+                <option>Enclosed</option>
+              </select>
+            </Field>
+            <Field label="Price">
+              <select>
+                <option>Instant</option>
+                <option>Request quotes</option>
+              </select>
+            </Field>
+          </Row2>
+          <Row2>
+            <Field label="Budget (£)">
+              <input type="number" min="0" />
+            </Field>
+            <Field label="PO reference">
+              <input />
+            </Field>
+          </Row2>
+          <Field label="Email for docs">
+            <input type="email" />
+          </Field>
+          <div className="row" style={{justifyContent:"flex-end"}}>
+            <button className="btn">Publish</button>
+          </div>
+        </div>
+      );
+    }
+
+    function MatchesScreen() {
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <div className="hstack" style={{justifyContent:"space-between"}}>
+              <strong>Matches</strong>
+              <div className="hstack">
+                <span className="pill">Lifts</span>
+                <span className="pill">Loads</span>
+              </div>
+            </div>
+            <div className="vstack">
+              <div className="card">
+                <div className="hstack" style={{justifyContent:"space-between"}}>
+                  <div>
+                    <strong>Offer: A12 Services → Heathrow</strong>
+                    <div className="muted">Score 88, detour 6 km, ETA 16:40</div>
+                  </div>
+                  <div className="hstack">
+                    <button className="btn ghost">Propose</button>
+                    <button className="btn">Chat</button>
+                  </div>
+                </div>
+              </div>
+              <div className="card">
+                <div className="hstack" style={{justifyContent:"space-between"}}>
+                  <div>
+                    <strong>Load: Derby → Bristol, VW Golf</strong>
+                    <div className="muted">Score 76, delivery by 18:00</div>
+                  </div>
+                  <div className="hstack">
+                    <button className="btn ghost">Propose</button>
+                    <button className="btn">Chat</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function InboxScreen() {
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <strong>Inbox</strong>
+            <div className="card">
+              <div className="hstack" style={{justifyContent:"space-between"}}>
+                <div>
+                  <strong>Order #DL-1042</strong>
+                  <div className="muted">Hi, I am at pickup now</div>
+                </div>
+                <div className="hstack">
+                  <button className="btn ghost">On my way</button>
+                  <button className="btn ghost">At pickup</button>
+                  <button className="btn">Delayed 10m</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ProfileScreen({ role, setRole }) {
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <strong>Profile</strong>
+            <div className="vstack">
+              <label>Roles</label>
+              <div className="hstack" style={{flexWrap:"wrap", gap:"6px"}}>
+                {ROLES.map(r => (
+                  <button key={r}
+                    className={"pill"}
+                    onClick={() => setRole(r)}>{r}</button>
+                ))}
+              </div>
+            </div>
+            <div className="divider"></div>
+            <div className="vstack">
+              <Field label="Trade plate">
+                <input type="file" />
+              </Field>
+              <Field label="Insurance (optional)">
+                <input type="file" />
+              </Field>
+              <Field label="Payment or subscription">
+                <select>
+                  <option>Subscription</option>
+                  <option>Per job</option>
+                </select>
+              </Field>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [role, setRole] = useState("Driver");
+      const [tab, setTab] = useState("Map");
+      const [showOffer, setShowOffer] = useState(false);
+
+      const handleOfferSubmit = (form) => {
+        console.log("Offer posted", form);
+        alert("Lift posted. You can wire this to your API later.");
+      };
+
+      return (
+        <div className="app">
+          <Header role={role} setRole={setRole} onOfferLift={() => setShowOffer(true)} />
+          {tab === "Map" && <MapScreen />}
+          {tab === "Post" && <PostScreen role={role} />}
+          {tab === "Matches" && <MatchesScreen />}
+          {tab === "Inbox" && <InboxScreen />}
+          {tab === "Profile" && <ProfileScreen role={role} setRole={setRole} />}
+          <OfferLiftModal open={showOffer} onClose={() => setShowOffer(false)} onSubmit={handleOfferSubmit} />
+          <Tabs tab={tab} setTab={setTab} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
