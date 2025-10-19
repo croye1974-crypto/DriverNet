@@ -15,9 +15,11 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
 
   const selectRole = async (role: "driver" | "loader") => {
     try {
-      await apiRequest("POST", `/api/users/${userId}/driver-type`, {
+      console.log("Attempting to set driver type:", role, "for user:", userId);
+      const response = await apiRequest("POST", `/api/users/${userId}/driver-type`, {
         driverType: role,
       });
+      console.log("Driver type set successfully:", response);
       
       // Invalidate user query to refetch updated driver type from backend
       queryClient.invalidateQueries({ queryKey: ["/api/users", userId] });
@@ -25,9 +27,10 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
       localStorage.setItem("driverType", role);
       onRoleSelected(role);
     } catch (error) {
+      console.error("Failed to set driver type:", error);
       toast({
         title: "Error",
-        description: "Failed to set driver type. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to set driver type. Please try again.",
         variant: "destructive",
       });
     }
