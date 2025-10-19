@@ -1,5 +1,5 @@
-const CACHE_NAME = 'drivenet-v1';
-const RUNTIME_CACHE = 'drivenet-runtime-v1';
+const CACHE_NAME = 'drivenet-v2-fresh';
+const RUNTIME_CACHE = 'drivenet-runtime-v2-fresh';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
