@@ -37,7 +37,8 @@ The application features a bold, professional mobile design utilizing a British 
 - **Progressive Web App (PWA)**: Complete PWA manifest, service worker for offline support, and iOS-specific optimizations.
 - **AI Route Optimization**: Intelligent route planning using TypeScript algorithms including nearest-neighbor optimization and logistic regression.
 - **Role Management**: Supports four user roles: `driver` (trade plate delivery), `lowloader` (flatbed/low-loader operators), `liftseeker` (passengers requesting rides), and `business` (companies booking transport services).
-- **Unified Interface**: Restructured UI with Map, Post, Matches, and Inbox tabs for a coherent workflow.
+- **Unified Interface**: Restructured UI with Map, Post, Matches, and Inbox tabs for a coherent workflow, replacing the previous Schedule/FindLifts structure.
+- **Smart Matching System**: Intelligent route/time-based matching using Haversine distance calculations (30km proximity threshold for origin AND destination), ±2 hour time windows, and scored ranking (0-100 scale). Each offer/request shows only relevant matches, eliminating noise from unrelated journeys.
 
 ### System Design Choices
 The architecture emphasizes clear separation between frontend, backend, and shared components. An in-memory database facilitates rapid MVP development, with WebSockets enabling real-time interactions. The design is mobile-first, focusing on usability and accessibility. The system is designed to support a multi-role ecosystem for various transport needs.
