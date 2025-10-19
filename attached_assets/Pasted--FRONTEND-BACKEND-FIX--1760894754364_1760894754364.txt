@@ -1,0 +1,99 @@
+/* ============================
+   FRONTEND + BACKEND FIX
+   ============================ */
+
+/* ---------- FRONTEND (React) ---------- */
+/* Paste this in a new file: src/DriverTypeToggle.tsx */
+
+import React from 'react';
+
+/* Simple API helper */
+async function setDriverType(userId: string, driverType: 'driver' | 'low_loader') {
+  const res = await fetch(`/api/users/${userId}/driver-type`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ driverType }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/* Component for toggling driver type */
+const DriverTypeToggle: React.FC = () => {
+  const userId = 'user-1';
+
+  const onPick = async (type: 'driver' | 'low_loader') => {
+    try {
+      console.log('POSTing driver type', type);
+      await setDriverType(userId, type);
+      alert(`Saved as ${type}`);
+    } catch (e: any) {
+      console.error(e);
+      alert('Failed: ' + e.message);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+      <button type="button" onClick={() => onPick('driver')}>
+        Driver
+      </button>
+      <button type="button" onClick={() => onPick('low_loader')}>
+        Low Loader
+      </button>
+    </div>
+  );
+};
+
+export default DriverTypeToggle;
+
+
+/* ---------- BACKEND (Express) ---------- */
+/* Add this route inside your server/index.ts (below your app setup) */
+
+import express from 'express';
+const app = express();
+
+app.use(express.json()); // Ensure JSON bodies are parsed
+
+// Example in-memory data (replace later with your DB)
+const db = {
+  users: [
+    {
+      id: 'user-1',
+      username: 'john_driver',
+      driverType: 'driver' as 'driver' | 'low_loader',
+    },
+  ],
+};
+
+// API route to update driverType
+app.post('/api/users/:id/driver-type', (req, res) => {
+  const { id } = req.params;
+  const { driverType } = req.body as { driverType?: 'driver' | 'low_loader' };
+
+  if (!driverType || !['driver', 'low_loader'].includes(driverType)) {
+    return res.status(400).json({ error: 'Invalid driverType' });
+  }
+
+  const user = db.users.find((u) => u.id === id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  user.driverType = driverType;
+  console.log(`[express] ✅ Updated driverType for ${id} to ${driverType}`);
+  return res.json({ ok: true, user });
+});
+
+/* ---------- Optional check route ---------- */
+// This lets you quickly confirm the change worked
+app.get('/api/users/:id', (req, res) => {
+  const { id } = req.params;
+  const user = db.users.find((u) => u.id === id);
+  return user ? res.json(user) : res.status(404).json({ error: 'Not found' });
+});
+
+/* ---------- Start the server ---------- */
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ DriveNet running on port ${PORT}`));
