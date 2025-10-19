@@ -36,6 +36,7 @@ The application features a bold, professional mobile design with a red, white, a
 - **Workflow Guidance**: Single "blue button" system to guide users through sequential actions.
 - **Progressive Web App (PWA)**: Complete PWA manifest, service worker for offline support, and iOS-specific optimizations.
 - **AI Route Optimization**: Intelligent route planning with driver density analysis and meet-up suggestions using TypeScript algorithms, including nearest-neighbor optimization, Haversine distances, and logistic regression for density scoring.
+- **Role Selector & Loader Dashboard**: Users select between "driver" (trade plate delivery) and "loader" (flatbed/low-loader operators) roles. Role persisted in backend database with frontend state sync. Loader dashboard provides quick check-in functionality and space advertising system.
 
 ### System Design Choices
 The architecture maintains clear separation between frontend, backend, and shared components. An in-memory database facilitates rapid MVP development, and WebSockets enable real-time interactions. The design prioritizes mobile-first usability and accessibility.
@@ -100,3 +101,39 @@ The architecture maintains clear separation between frontend, backend, and share
 - **Dark Mode**: Deep navy background (222 47% 11%) with blue-grey cards (217 33% 17%)
 - **Accessibility**: All colored backgrounds with white text meet WCAG AA 4.5:1 contrast requirement
 - **Impact**: Eliminates "bland grey" appearance with professional, trustworthy British identity that improves usability and visual appeal while maintaining accessibility standards
+
+### Role Selector & Loader Dashboard (October 2025)
+- **Feature**: Dual-role system allowing users to choose between "driver" (trade plate delivery) or "loader" (flatbed/low-loader operators)
+- **Backend Schema Changes**:
+  - Added `driverType` field to users table (nullable text: "driver" | "loader")
+  - Created `checkIns` table: userId, driverType, fromTime, toTime, lat, lng, w3w, note
+  - Created `loaderSpaces` table: userId, capacityKg, originW3W, destW3W, acceptsCars/Vans/Bikes/NonRunners, strapsAvailable, winchAvailable, note
+- **API Endpoints**:
+  - `GET /api/users/:userId` - Fetch user data including driverType (password filtered)
+  - `POST /api/users/:userId/driver-type` - Update user's role selection
+  - `POST /api/checkins` - Create loader check-in with availability window
+  - `GET /api/checkins/nearby` - Find nearby loaders (within radius, filters by driverType)
+  - `GET /api/checkins/active` - Get all currently active check-ins
+  - `POST /api/loader-spaces` - Advertise available cargo space
+  - `GET /api/loader-spaces/available` - Browse available loader spaces
+  - All endpoints return 400 with validation details for bad input (Zod error handling)
+- **Frontend Components**:
+  - **RoleSelect**: Initial screen with two large cards for role selection, persists choice to backend + localStorage cache
+  - **LoaderDashboard**: Dedicated interface for low-loader operators with:
+    - Quick Check-In card (blue header): Expandable form for setting availability window and location
+    - Advertise Space card (red header): Full form for capacity, what3words origin/destination, vehicle acceptance flags, equipment availability
+    - Available Spaces list: Displays all advertised spaces with capacity, routes, and loader details
+- **Role Persistence Flow**:
+  1. App.tsx fetches user from backend on mount via `useQuery({ queryKey: ["/api/users", userId] })`
+  2. driverType synced from backend response to component state
+  3. localStorage used only as cache for faster subsequent loads
+  4. RoleSelect invalidates user query after updating to trigger immediate refetch
+  5. Backend database is source of truth (fixes role drift between devices)
+- **UI/UX Design**:
+  - Role cards use British blue (driver) and red (loader) variants with large icons
+  - Loader dashboard follows same color scheme: blue headers for check-in, red for advertising
+  - Mobile-first design (375x667 viewport)
+  - Zero-toasts workflow: Only error toasts shown, success is silent
+  - Form validation with descriptive error messages
+- **Testing**: E2E Playwright tests verify role selection, persistence across reloads, check-in submission, space advertising, and data display
+- **Impact**: Expands DriveNet to support flatbed/low-loader operators, enabling vehicle transport coordination alongside ride-sharing for trade plate drivers
