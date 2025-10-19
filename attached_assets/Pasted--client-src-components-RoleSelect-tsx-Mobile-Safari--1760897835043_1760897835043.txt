@@ -1,6 +1,6 @@
 /* =======================================
    client/src/components/RoleSelect.tsx
-   Mobile-Safari Proof Version
+   Mobile-Safari Proof Version (Paste All)
    ======================================= */
 import React, { useCallback } from 'react';
 
@@ -25,7 +25,7 @@ const RoleSelect: React.FC = () => {
       const res = await setDriverType(USER_ID, type);
       console.log('✅ POST ok', res);
       alert(`Saved as ${type}`);
-      window.location.reload(); // Reload to show Map page
+      window.location.href = '/map'; // auto-redirect after save
     } catch (err) {
       console.error('❌ POST failed', err);
       alert('Failed to save driver type');

@@ -84,14 +84,7 @@ function AppContent() {
         <div className="bg-yellow-500 text-black p-2 text-xs">
           DEBUG: RoleSelect forced for testing. Current driverType: {driverType || 'none'}
         </div>
-        <RoleSelect
-          userId={currentUserId}
-          onRoleSelected={(type) => {
-            console.log("✅ Role selected callback triggered:", type);
-            // Invalidate query to refetch user data after role selection
-            queryClient.invalidateQueries({ queryKey: ["/api/users", currentUserId] });
-          }}
-        />
+        <RoleSelect />
       </div>
     );
   }
