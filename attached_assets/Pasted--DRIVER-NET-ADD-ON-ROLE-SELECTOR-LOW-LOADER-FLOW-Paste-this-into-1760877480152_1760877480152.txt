@@ -1,0 +1,255 @@
+/* =======================
+   DRIVER NET ADD-ON (ROLE SELECTOR + LOW-LOADER FLOW)
+   Paste this into one file (drivernet_addon.ts or similar)
+   and copy the relevant sections into your project structure
+   ======================= */
+
+// -------------------------
+// 1. DATABASE SCHEMA (Drizzle / Postgres)
+// -------------------------
+import { pgTable, serial, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull().default("driver"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const checkins = pgTable("checkins", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull(),
+  lat: text("lat"),
+  lng: text("lng"),
+  w3w: text("w3w"),
+  fromTime: timestamp("from_time").notNull(),
+  toTime: timestamp("to_time").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const loaderSpaces = pgTable("loader_spaces", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  status: text("status").notNull().default("available"),
+  capacityKg: integer("capacity_kg"),
+  lengthCm: integer("length_cm"),
+  widthCm: integer("width_cm"),
+  heightCm: integer("height_cm"),
+  acceptsCars: boolean("accepts_cars").default(true),
+  acceptsVans: boolean("accepts_vans").default(false),
+  acceptsBikes: boolean("accepts_bikes").default(false),
+  acceptsNonRunners: boolean("accepts_nonrunners").default(false),
+  strapsAvailable: boolean("straps_available").default(true),
+  winchAvailable: boolean("winch_available").default(false),
+  originLat: text("origin_lat"),
+  originLng: text("origin_lng"),
+  originW3W: text("origin_w3w"),
+  destLat: text("dest_lat"),
+  destLng: text("dest_lng"),
+  destW3W: text("dest_w3w"),
+  departAfter: timestamp("depart_after"),
+  arriveBefore: timestamp("arrive_before"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+
+// -------------------------
+// 2. EXPRESS ROUTES
+// -------------------------
+import express, { Router } from "express";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+const app = express();
+app.use(express.json());
+
+// ROLE ROUTE
+const roles = Router();
+roles.post("/set-role", async (req, res) => {
+  const { userId, role } = req.body;
+  if (!["driver","loader"].includes(role)) return res.status(400).json({ error: "Bad role" });
+  await db.update(users).set({ role }).where(eq(users.id, Number(userId)));
+  res.json({ ok: true });
+});
+app.use("/api/roles", roles);
+
+// CHECKIN ROUTE
+const checkinRouter = Router();
+checkinRouter.post("/", async (req, res) => {
+  const { userId, role, lat, lng, w3w, fromTime, toTime, note } = req.body;
+  const row = await db.insert(checkins).values({
+    userId, role, lat, lng, w3w,
+    fromTime: new Date(fromTime),
+    toTime: new Date(toTime),
+    note
+  }).returning();
+  res.json(row[0]);
+});
+checkinRouter.get("/nearby", async (_req, res) => {
+  // Replace with geo logic later
+  const rows = await db.query.checkins.findMany({ limit: 100 });
+  res.json(rows);
+});
+app.use("/api/checkins", checkinRouter);
+
+// LOADER SPACES ROUTE
+const loaderRouter = Router();
+loaderRouter.post("/", async (req, res) => {
+  const p = req.body;
+  const row = await db.insert(loaderSpaces).values({
+    ...p,
+    departAfter: p.departAfter ? new Date(p.departAfter) : null,
+    arriveBefore: p.arriveBefore ? new Date(p.arriveBefore) : null
+  }).returning();
+  res.json(row[0]);
+});
+loaderRouter.get("/available", async (_req, res) => {
+  const rows = await db.query.loaderSpaces.findMany({ limit: 100 });
+  res.json(rows);
+});
+app.use("/api/loader-spaces", loaderRouter);
+
+
+// -------------------------
+// 3. WHAT3WORDS HELPER (optional)
+// -------------------------
+import fetch from "node-fetch";
+const W3W_KEY = process.env.W3W_API_KEY;
+export async function w3wToCoords(words: string) {
+  if (!W3W_KEY) return null;
+  const r = await fetch(`https://api.what3words.com/v3/convert-to-coordinates?words=${encodeURIComponent(words)}&key=${W3W_KEY}`);
+  if (!r.ok) return null;
+  const j = await r.json();
+  return j.coordinates ? { lat: j.coordinates.lat, lng: j.coordinates.lng } : null;
+}
+
+
+// -------------------------
+// 4. FRONTEND ROUTES (React Router)
+// -------------------------
+import { createBrowserRouter } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+
+// --- Role selection screen ---
+export function RoleSelect() {
+  const nav = useNavigate();
+  const setRole = async (role: "driver" | "loader") => {
+    const userId = localStorage.getItem("uid") || String(Math.floor(Math.random() * 1e9));
+    localStorage.setItem("uid", userId);
+    await fetch("/api/roles/set-role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, role })
+    });
+    localStorage.setItem("role", role);
+    nav(role === "driver" ? "/driver" : "/loader");
+  };
+  return (
+    <div style={{ padding: 24 }}>
+      <h2>Choose how you want to use DriverNet</h2>
+      <div style={{ display: "grid", gap: 12, maxWidth: 420 }}>
+        <button onClick={() => setRole("driver")}>I am an individual driver</button>
+        <button onClick={() => setRole("loader")}>I operate a low-loader or flatbed</button>
+      </div>
+    </div>
+  );
+}
+
+// --- Dummy Driver screen (replace with yours) ---
+export function DriverHome() {
+  return (
+    <div style={{ padding: 24 }}>
+      <h2>Driver Dashboard</h2>
+      <p>Your existing Driver UI goes here.</p>
+    </div>
+  );
+}
+
+// --- Loader dashboard ---
+export function LoaderHome() {
+  const [avail, setAvail] = useState<any[]>([]);
+  const [form, setForm] = useState<any>({ acceptsCars: true, strapsAvailable: true });
+
+  useEffect(() => {
+    fetch("/api/loader-spaces/available").then(r => r.json()).then(setAvail);
+  }, []);
+
+  const postSpace = async () => {
+    const userId = Number(localStorage.getItem("uid"));
+    const payload = { userId, status: "available", ...form };
+    await fetch("/api/loader-spaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const next = await fetch("/api/loader-spaces/available").then(r => r.json());
+    setAvail(next);
+  };
+
+  const checkIn = async () => {
+    const userId = Number(localStorage.getItem("uid"));
+    const now = new Date();
+    const in2h = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    await fetch("/api/checkins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId, role: "loader",
+        fromTime: now.toISOString(), toTime: in2h.toISOString(),
+        note: "Low-loader available"
+      })
+    });
+    alert("Checked in");
+  };
+
+  return (
+    <div style={{ padding: 16 }}>
+      <h2>Low-Loader Dashboard</h2>
+      <section style={{ marginBottom: 24 }}>
+        <button onClick={checkIn}>Check in (2 hours)</button>
+        <button onClick={postSpace}>Post current space</button>
+      </section>
+      <section>
+        <h3>Advertise space</h3>
+        <input placeholder="Capacity (kg)" onChange={e => setForm({ ...form, capacityKg: Number(e.target.value) })}/>
+        <input placeholder="Origin w3w" onChange={e => setForm({ ...form, originW3W: e.target.value })}/>
+        <input placeholder="Destination w3w" onChange={e => setForm({ ...form, destW3W: e.target.value })}/>
+        <textarea placeholder="Notes" onChange={e => setForm({ ...form, note: e.target.value })}/>
+      </section>
+      <h3>Available space</h3>
+      <ul>{avail.map((s,i)=><li key={i}>{s.originW3W} → {s.destW3W} | {s.capacityKg} kg</li>)}</ul>
+    </div>
+  );
+}
+
+// --- App Header ---
+export function AppHeader() {
+  const nav = useNavigate();
+  const switchRole = () => {
+    const current = localStorage.getItem("role") === "loader" ? "driver" : "loader";
+    localStorage.setItem("role", current);
+    nav(current === "driver" ? "/driver" : "/loader");
+  };
+  return (
+    <header style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
+      <button onClick={()=>nav("/driver")}>Driver</button>
+      <button onClick={()=>nav("/loader")}>Low-Loader</button>
+      <button onClick={switchRole}>Switch</button>
+    </header>
+  );
+}
+
+// --- Router config ---
+export const router = createBrowserRouter([
+  { path: "/", element: <RoleSelect /> },
+  { path: "/driver", element: <DriverHome /> },
+  { path: "/loader", element: <LoaderHome /> }
+]);
+
+// -------------------------
+// 5. SERVER STARTER
+// -------------------------
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log("DriverNet server running on", port));
