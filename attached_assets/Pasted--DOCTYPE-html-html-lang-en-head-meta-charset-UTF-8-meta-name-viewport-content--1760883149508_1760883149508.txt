@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DriveNet Unified UI – Single File MVP</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f7f7f8; color:#111; }
+    header { position: sticky; top:0; background:#fff; border-bottom:1px solid #e6e6e9; padding:10px 12px; z-index:10; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .grow { flex:1; }
+    select, input, textarea, button { font: inherit; padding:10px; border:1px solid #d1d1d6; border-radius:10px; background:#fff; }
+    label { font-size:13px; color:#444; margin-bottom:6px; display:block; }
+    .container { padding:12px; max-width:960px; margin:0 auto; }
+    .card { background:#fff; border:1px solid #e6e6e9; border-radius:14px; padding:14px; margin-bottom:12px; }
+    .hstack { display:flex; gap:8px; align-items:center; }
+    .vstack { display:grid; gap:10px; }
+    .tabs { position: sticky; bottom:0; background:#fff; border-top:1px solid #e6e6e9; display:grid; grid-template-columns:repeat(5,1fr); }
+    .tab { text-align:center; padding:10px 0; font-size:14px; cursor:pointer; }
+    .tab.active { color:#0a7; font-weight:600; }
+    .btn { background:#0a7; color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; }
+    .btn.ghost { background:#fff; color:#111; border:1px solid #d1d1d6; }
+    .pill { border-radius:999px; padding:7px 10px; background:#eef8f4; color:#065; font-size:12px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .muted { color:#666; font-size:13px; }
+    .divider { height:1px; background:#eee; margin:8px 0 10px 0; }
+    .error { background:#ffe8e8; border:1px solid #ffbcbc; color:#a40000; padding:8px 12px; border-radius:10px; }
+    .ok { background:#e8fff2; border:1px solid #bcffd6; color:#004d2a; padding:8px 12px; border-radius:10px; }
+    .mapbox { height:240px; background: repeating-linear-gradient(45deg,#fafafa,#fafafa 10px,#f2f2f7 10px,#f2f2f7 20px); border:1px dashed #d9d9de; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#666; }
+    @media (max-width: 640px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React via CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    // Tabs and roles
+    const TABS = ["Map","Post","Matches","Inbox","Profile"];
+    const ROLES = ["Driver","Low Loader","Lift Seeker","Business"];
+
+    // Simple in page storage
+    const store = {
+      users: [{ id: "me", name: "You", roles: ["Driver"], rating: 5 }],
+      liftOffers: [],
+      driverAvail: [],
+      capacityOffers: [],
+      liftRequests: [],
+      loadRequests: [],
+      messages: []
+    };
+
+    // Helpers
+    const uid = () => Math.random().toString(36).slice(2,10);
+    const has = v => v !== undefined && v !== null && String(v).trim() !== "";
+    const must = (cond, msg) => { if (!cond) throw new Error(msg); };
+    const tokens = s => String(s||"").toLowerCase().split(/\W+/).filter(Boolean);
+    const jaccard = (a,b) => {
+      const A = new Set(tokens(a)), B = new Set(tokens(b));
+      const inter = [...A].filter(x=>B.has(x)).length;
+      const uni = new Set([...A,...B]).size || 1;
+      return inter/uni;
+    };
+    const windowOverlap = (a0,a1,b0,b1) => {
+      const A0 = +new Date(a0||0), A1 = +new Date(a1||0);
+      const B0 = +new Date(b0||0), B1 = +new Date(b1||0);
+      if(!A0||!A1||!B0||!B1) return 0;
+      const latest = Math.max(A0,B0), earliest = Math.min(A1,B1);
+      const overlap = Math.max(0, earliest - latest);
+      const span = Math.max(A1-A0, B1-B0) || 1;
+      return overlap/span;
+    };
+    const dateClose = (d, w) => {
+      const D = +new Date(d||0), W = +new Date(w||0);
+      if(!D||!W) return 0;
+      const diff = Math.abs(D-W);
+      return Math.max(0, 1 - diff/(3*24*3600*1000)); // within 3 days
+    };
+
+    // Mock API
+    const API = {
+      postLiftOffer(data){
+        must(has(data.from), "From is required");
+        must(has(data.to), "To is required");
+        must(has(data.depart) && has(data.arrive), "Time window is required");
+        must(Number(data.seats) > 0, "Seats must be greater than 0");
+        const rec = { id: uid(), userId:"me", createdAt: Date.now(), ...data };
+        store.liftOffers.push(rec); return rec;
+      },
+      postDriverAvailability(data){
+        must(has(data.from)&&has(data.to), "Leg needs from and to");
+        must(has(data.start)&&has(data.end), "Availability window required");
+        const rec = { id: uid(), userId:"me", createdAt: Date.now(), ...data };
+        store.driverAvail.push(rec);
+        if (data.autoOffers) {
+          API.postLiftOffer({
+            from:data.from, to:data.to, depart:data.start, arrive:data.end,
+            seats:data.seats||1, detour:data.detour||10, priceType:data.priceType||"Free",
+            priceValue:data.priceValue||"", vehicle:data.vehicle||"Hatchback",
+            notes:"Auto from availability", visibility:"Everyone", repeat:"None"
+          });
+        }
+        return rec;
+      },
+      postCapacityOffer(data){
+        must(has(data.from)&&has(data.to), "From and To required");
+        must(has(data.date), "Date required");
+        must(Number(data.maxWeight) >= 0, "Max weight required");
+        const rec = { id: uid(), operatorId:"me", createdAt: Date.now(), ...data };
+        store.capacityOffers.push(rec); return rec;
+      },
+      postLiftRequest(data){
+        must(has(data.from)&&has(data.to), "From and To required");
+        must(has(data.depart)&&has(data.arrive), "Time window required");
+        const rec = { id: uid(), userId:"me", createdAt: Date.now(), ...data };
+        store.liftRequests.push(rec); return rec;
+      },
+      postLoadRequest(data){
+        must(has(data.pickup)&&has(data.dropoff), "Pickup and Drop-off required");
+        must(has(data.pickupWindow)&&has(data.dropWindow), "Windows required");
+        const rec = { id: uid(), businessId:"me", createdAt: Date.now(), ...data };
+        store.loadRequests.push(rec); return rec;
+      },
+      listLiftOffers(){ return [...store.liftOffers]; },
+      listCapacity(){ return [...store.capacityOffers]; },
+      listLiftRequests(){ return [...store.liftRequests]; },
+      listLoadRequests(){ return [...store.loadRequests]; },
+      scoreLift(offer, req){
+        const r = jaccard(offer.from+" "+offer.to, req.from+" "+req.to);
+        const t = windowOverlap(offer.depart, offer.arrive, req.depart, req.arrive);
+        const det = Math.min(offer.detour||0, 50) / 100;
+        let s = Math.round((r*0.6 + t*0.6) * (1 - det) * 100);
+        if (isNaN(s)) s = 0; return Math.max(0, Math.min(100, s));
+      },
+      scoreLoad(cap, load){
+        const r = jaccard(cap.from+" "+cap.to, load.pickup+" "+load.dropoff);
+        const t = dateClose(cap.date, load.pickupWindow);
+        const fits = has(load.weight)&&has(cap.maxWeight) ? (Number(load.weight) <= Number(cap.maxWeight) ? 1 : 0) : 1;
+        let s = Math.round((r*0.5 + t*0.5) * 100 * fits);
+        if (isNaN(s)) s = 0; return Math.max(0, Math.min(100, s));
+      }
+    };
+
+    // UI bits
+    const Field = ({label, children}) => <div className="vstack"><label>{label}</label>{children}</div>;
+    const Row2 = ({children}) => <div className="grid2">{children}</div>;
+    const Row3 = ({children}) => <div className="grid3">{children}</div>;
+
+    function Header({ role, setRole, onOffer }) {
+      return (
+        <header>
+          <div className="row">
+            <select className="grow" value={role} onChange={e=>setRole(e.target.value)}>
+              {ROLES.map(r => <option key={r} value={r}>{r} mode</option>)}
+            </select>
+            <button className="btn" onClick={onOffer}>Offer lift between jobs</button>
+          </div>
+        </header>
+      );
+    }
+
+    function Tabs({ tab, setTab }) {
+      return (
+        <nav className="tabs">
+          {TABS.map(t => (
+            <div key={t} className={"tab " + (tab===t?"active":"")} onClick={()=>setTab(t)}>{t}</div>
+          ))}
+        </nav>
+      );
+    }
+
+    // Global offer modal
+    function OfferModal({ open, onClose }) {
+      const [msg, setMsg] = useState("");
+      const [f, setF] = useState({
+        from:"", to:"", depart:"", arrive:"", seats:1, detour:10,
+        priceType:"Free", priceValue:"", vehicle:"Hatchback",
+        notes:"", visibility:"Everyone", repeat:"None"
+      });
+      const u = (k,v)=>setF({...f,[k]:v});
+      if (!open) return null;
+      const submit = () => {
+        try { API.postLiftOffer(f); alert("Lift posted"); onClose(); }
+        catch(e){ setMsg(String(e.message||e)); }
+      };
+      return (
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;padding:12px" onclick={onClose}>
+          <div className="card" style={{width:"100%",maxWidth:640}} onclick={e=>e.stopPropagation()}>
+            <div className="row" style={{justifyContent:"space-between"}}>
+              <h3>Offer lift between jobs</h3>
+              <button className="btn ghost" onClick={onClose}>Close</button>
+            </div>
+            {msg && <div className="error">{msg}</div>}
+            <Row2>
+              <Field label="From"><input value={f.from} onChange={e=>u("from",e.target.value)} placeholder="Search or what3words" /></Field>
+              <Field label="To"><input value={f.to} onChange={e=>u("to",e.target.value)} placeholder="Search or what3words" /></Field>
+            </Row2>
+            <Row2>
+              <Field label="Earliest depart"><input type="datetime-local" value={f.depart} onChange={e=>u("depart",e.target.value)} /></Field>
+              <Field label="Latest arrive"><input type="datetime-local" value={f.arrive} onChange={e=>u("arrive",e.target.value)} /></Field>
+            </Row2>
+            <Row3>
+              <Field label="Seats"><input type="number" min="1" max="3" value={f.seats} onChange={e=>u("seats",e.target.value)} /></Field>
+              <Field label="Detour (km)"><input type="number" min="0" value={f.detour} onChange={e=>u("detour",e.target.value)} /></Field>
+              <Field label="Price"><div className="hstack">
+                <select value={f.priceType} onChange={e=>u("priceType",e.target.value)}>
+                  <option>Free</option><option>Fixed</option><option>Tip</option>
+                </select>
+                {f.priceType==="Fixed" && <input type="number" min="0" placeholder="£" value={f.priceValue} onChange={e=>u("priceValue",e.target.value)} />}
+              </div></Field>
+            </Row3>
+            <Row2>
+              <Field label="Vehicle"><select value={f.vehicle} onChange={e=>u("vehicle",e.target.value)}><option>Hatchback</option><option>Van</option><option>Other</option></select></Field>
+              <Field label="Visibility"><select value={f.visibility} onChange={e=>u("visibility",e.target.value)}><option>Everyone</option><option>Followers</option></select></Field>
+            </Row2>
+            <Field label="Notes"><input value={f.notes} onChange={e=>u("notes",e.target.value)} placeholder="Anything riders should know" /></Field>
+            <div className="divider"></div>
+            <div className="row" style={{justifyContent:"flex-end"}}>
+              <button className="btn ghost" onClick={onClose}>Cancel</button>
+              <button className="btn" onClick={submit}>Post lift</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Screens
+    function MapScreen(){
+      const offers = API.listLiftOffers();
+      const caps = API.listCapacity();
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <div className="mapbox">Map placeholder for offers and requests</div>
+            <div className="muted">Showing {offers.length} lift offers and {caps.length} capacity posts</div>
+          </div>
+        </div>
+      );
+    }
+
+    function DriverPost(){
+      const [ok,setOk]=useState(""); const [err,setErr]=useState("");
+      const [f,setF]=useState({from:"",to:"",start:"",end:"",seats:1,detour:10,priceType:"Free",priceValue:"",autoOffers:true,vehicle:"Hatchback"});
+      const u=(k,v)=>setF({...f,[k]:v});
+      const submit=()=>{ setOk(""); setErr(""); try{ API.postDriverAvailability(f); setOk("Availability published"); }catch(e){ setErr(String(e.message||e)); } };
+      return (
+        <div className="card vstack">
+          <h3>Post availability</h3>
+          {err && <div className="error">{err}</div>}{ok && <div className="ok">{ok}</div>}
+          <Row2><Field label="Leg from"><input value={f.from} onChange={e=>u("from",e.target.value)} /></Field><Field label="Leg to"><input value={f.to} onChange={e=>u("to",e.target.value)} /></Field></Row2>
+          <Row2><Field label="Window start"><input type="datetime-local" value={f.start} onChange={e=>u("start",e.target.value)} /></Field><Field label="Window end"><input type="datetime-local" value={f.end} onChange={e=>u("end",e.target.value)} /></Field></Row2>
+          <Row3>
+            <Field label="Seats"><input type="number" min="1" max="3" value={f.seats} onChange={e=>u("seats",e.target.value)} /></Field>
+            <Field label="Detour (km)"><input type="number" min="0" value={f.detour} onChange={e=>u("detour",e.target.value)} /></Field>
+            <Field label="Price rule"><select value={f.priceType} onChange={e=>u("priceType",e.target.value)}><option>Free</option><option>Fixed</option><option>Tip</option></select></Field>
+          </Row3>
+          {f.priceType==="Fixed" && <Field label="Price (£)"><input type="number" min="0" value={f.priceValue} onChange={e=>u("priceValue",e.target.value)} /></Field>}
+          <div className="hstack"><input id="auto" type="checkbox" checked={f.autoOffers} onChange={e=>u("autoOffers",e.target.checked)} /><label htmlFor="auto">Auto generate lift posts</label></div>
+          <div className="row" style={{justifyContent:"flex-end"}}><button className="btn" onClick={submit}>Publish</button></div>
+        </div>
+      );
+    }
+
+    function LowLoaderPost(){
+      const [ok,setOk]=useState(""); const [err,setErr]=useState("");
+      const [f,setF]=useState({from:"",to:"",date:"",priceType:"Quote",length:"",width:"",height:"",maxWeight:"",space:"",items:"",gear:"",cabSeat:false});
+      const u=(k,v)=>setF({...f,[k]:v});
+      const submit=()=>{ setOk(""); setErr(""); try{ API.postCapacityOffer(f); setOk("Capacity posted"); }catch(e){ setErr(String(e.message||e)); } };
+      return (
+        <div className="card vstack">
+          <h3>Post capacity</h3>
+          {err && <div className="error">{err}</div>}{ok && <div className="ok">{ok}</div>}
+          <Row2><Field label="From"><input value={f.from} onChange={e=>u("from",e.target.value)} /></Field><Field label="To"><input value={f.to} onChange={e=>u("to",e.target.value)} /></Field></Row2>
+          <Row2><Field label="Date"><input type="date" value={f.date} onChange={e=>u("date",e.target.value)} /></Field><Field label="Price type"><select value={f.priceType} onChange={e=>u("priceType",e.target.value)}><option>Quote</option><option>Fixed</option></select></Field></Row2>
+          <Row3><Field label="Length (m)"><input type="number" step="0.1" value={f.length} onChange={e=>u("length",e.target.value)} /></Field><Field label="Width (m)"><input type="number" step="0.1" value={f.width} onChange={e=>u("width",e.target.value)} /></Field><Field label="Height (m)"><input type="number" step="0.1" value={f.height} onChange={e=>u("height",e.target.value)} /></Field></Row3>
+          <Row2><Field label="Max weight (kg)"><input type="number" value={f.maxWeight} onChange={e=>u("maxWeight",e.target.value)} /></Field><Field label="Space available percent"><input type="number" min="0" max="100" value={f.space} onChange={e=>u("space",e.target.value)} /></Field></Row2>
+          <Row2><Field label="Items allowed"><input placeholder="Running, non running, SORN" value={f.items} onChange={e=>u("items",e.target.value)} /></Field><Field label="Special gear"><input placeholder="Winch, ramps, enclosed" value={f.gear} onChange={e=>u("gear",e.target.value)} /></Field></Row2>
+          <div className="hstack"><input id="cab" type="checkbox" checked={f.cabSeat} onChange={()=>u("cabSeat", !f.cabSeat)} /><label htmlFor="cab">Cab seat available</label></div>
+          <div className="row" style={{justifyContent:"flex-end"}}><button className="btn" onClick={submit}>Publish</button></div>
+        </div>
+      );
+    }
+
+    function SeekerPost(){
+      const [ok,setOk]=useState(""); const [err,setErr]=useState("");
+      const [f,setF]=useState({from:"",to:"",depart:"",arrive:"",luggage:"No",budget:"",notes:""});
+      const u=(k,v)=>setF({...f,[k]:v});
+      const submit=()=>{ setOk(""); setErr(""); try{ API.postLiftRequest(f); setOk("Request posted"); }catch(e){ setErr(String(e.message||e)); } };
+      return (
+        <div className="card vstack">
+          <h3>Request a lift</h3>
+          {err && <div className="error">{err}</div>}{ok && <div className="ok">{ok}</div>}
+          <Row2><Field label="From"><input value={f.from} onChange={e=>u("from",e.target.value)} /></Field><Field label="To"><input value={f.to} onChange={e=>u("to",e.target.value)} /></Field></Row2>
+          <Row2><Field label="Earliest depart"><input type="datetime-local" value={f.depart} onChange={e=>u("depart",e.target.value)} /></Field><Field label="Latest arrive"><input type="datetime-local" value={f.arrive} onChange={e=>u("arrive",e.target.value)} /></Field></Row2>
+          <Row2><Field label="Bags or kit"><select value={f.luggage} onChange={e=>u("luggage",e.target.value)}><option>No</option><option>Yes</option></select></Field><Field label="Budget (max £)"><input type="number" min="0" value={f.budget} onChange={e=>u("budget",e.target.value)} /></Field></Row2>
+          <Field label="Notes"><input value={f.notes} onChange={e=>u("notes",e.target.value)} /></Field>
+          <div className="row" style={{justifyContent:"flex-end"}}><button className="btn" onClick={submit}>Publish</button></div>
+        </div>
+      );
+    }
+
+    function BusinessPost(){
+      const [ok,setOk]=useState(""); const [err,setErr]=useState("");
+      const [f,setF]=useState({pickup:"",pickupWindow:"",dropoff:"",dropWindow:"",make:"",model:"",regVin:"",length:"",width:"",height:"",weight:"",running:"Yes",extras:"",priceType:"Request quotes",budget:"",po:"",email:""});
+      const u=(k,v)=>setF({...f,[k]:v});
+      const submit=()=>{ setOk(""); setErr(""); try{ API.postLoadRequest(f); setOk("Request sent"); }catch(e){ setErr(String(e.message||e)); } };
+      return (
+        <div className="card vstack">
+          <h3>Book low loader space</h3>
+          {err && <div className="error">{err}</div>}{ok && <div className="ok">{ok}</div>}
+          <Row2><Field label="Pickup address"><input value={f.pickup} onChange={e=>u("pickup",e.target.value)} /></Field><Field label="Pickup window"><input type="datetime-local" value={f.pickupWindow} onChange={e=>u("pickupWindow",e.target.value)} /></Field></Row2>
+          <Row2><Field label="Drop-off address"><input value={f.dropoff} onChange={e=>u("dropoff",e.target.value)} /></Field><Field label="Delivery window"><input type="datetime-local" value={f.dropWindow} onChange={e=>u("dropWindow",e.target.value)} /></Field></Row2>
+          <Row3><Field label="Make"><input value={f.make} onChange={e=>u("make",e.target.value)} /></Field><Field label="Model"><input value={f.model} onChange={e=>u("model",e.target.value)} /></Field><Field label="Reg or VIN"><input value={f.regVin} onChange={e=>u("regVin",e.target.value)} /></Field></Row3>
+          <Row3><Field label="Length (m)"><input type="number" step="0.1" value={f.length} onChange={e=>u("length",e.target.value)} /></Field><Field label="Width (m)"><input type="number" step="0.1" value={f.width} onChange={e=>u("width",e.target.value)} /></Field><Field label="Height (m)"><input type="number" step="0.1" value={f.height} onChange={e=>u("height",e.target.value)} /></Field></Row3>
+          <Row2><Field label="Weight (kg)"><input type="number" value={f.weight} onChange={e=>u("weight",e.target.value)} /></Field><Field label="Running"><select value={f.running} onChange={e=>u("running",e.target.value)}><option>Yes</option><option>No</option></select></Field></Row2>
+          <Row2><Field label="Extras"><input value={f.extras} onChange={e=>u("extras",e.target.value)} placeholder="Winch, ramps, enclosed" /></Field><Field label="Price"><select value={f.priceType} onChange={e=>u("priceType",e.target.value)}><option>Instant</option><option>Request quotes</option></select></Field></Row2>
+          <Row2><Field label="Budget (£)"><input type="number" min="0" value={f.budget} onChange={e=>u("budget",e.target.value)} /></Field><Field label="PO reference"><input value={f.po} onChange={e=>u("po",e.target.value)} /></Field></Row2>
+          <Field label="Email for docs"><input type="email" value={f.email} onChange={e=>u("email",e.target.value)} /></Field>
+          <div className="row" style={{justifyContent:"flex-end"}}><button className="btn" onClick={submit}>Publish</button></div>
+        </div>
+      );
+    }
+
+    function MatchesScreen(){
+      const offers = API.listLiftOffers();
+      const reqs = API.listLiftRequests();
+      const caps = API.listCapacity();
+      const loads = API.listLoadRequests();
+
+      const liftPairs = [];
+      offers.forEach(o => reqs.forEach(r => liftPairs.push({ o, r, score: API.scoreLift(o,r) })));
+      liftPairs.sort((a,b)=>b.score-a.score);
+
+      const loadPairs = [];
+      caps.forEach(c => loads.forEach(l => loadPairs.push({ c, l, score: API.scoreLoad(c,l) })));
+      loadPairs.sort((a,b)=>b.score-a.score);
+
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <div className="row" style={{justifyContent:"space-between"}}>
+              <strong>Lift matches</strong><span className="muted">{liftPairs.length} pairs</span>
+            </div>
+            {liftPairs.slice(0,6).map(p => (
+              <div key={p.o.id+p.r.id} className="card">
+                <div className="row" style={{justifyContent:"space-between"}}>
+                  <div>
+                    <strong>{p.o.from} → {p.o.to}</strong>
+                    <div className="muted">Request {p.r.from} → {p.r.to}</div>
+                  </div>
+                  <div className="hstack">
+                    <span className="pill">Score {p.score}</span>
+                    <button className="btn ghost" onClick={()=>alert("Proposed")}>Propose</button>
+                    <button className="btn" onClick={()=>alert("Chat open")}>Chat</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card vstack">
+            <div className="row" style={{justifyContent:"space-between"}}>
+              <strong>Load matches</strong><span className="muted">{loadPairs.length} pairs</span>
+            </div>
+            {loadPairs.slice(0,6).map(p => (
+              <div key={p.c.id+p.l.id} className="card">
+                <div className="row" style={{justifyContent:"space-between"}}>
+                  <div>
+                    <strong>{p.c.from} → {p.c.to}</strong>
+                    <div className="muted">Load {p.l.make} {p.l.model} {p.l.pickup} → {p.l.dropoff}</div>
+                  </div>
+                  <div className="hstack">
+                    <span className="pill">Score {p.score}</span>
+                    <button className="btn ghost" onClick={()=>alert("Proposed")}>Propose</button>
+                    <button className="btn" onClick={()=>alert("Chat open")}>Chat</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function InboxScreen(){
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <strong>Inbox</strong>
+            <div className="card">
+              <div className="row" style={{justifyContent:"space-between"}}>
+                <div>
+                  <strong>Order DL 1042</strong>
+                  <div className="muted">Hi, I am at pickup now</div>
+                </div>
+                <div className="hstack">
+                  <button className="btn ghost" onClick={()=>alert("On my way")}>On my way</button>
+                  <button className="btn ghost" onClick={()=>alert("At pickup")}>At pickup</button>
+                  <button className="btn" onClick={()=>alert("Delayed 10 min")}>Delayed 10m</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ProfileScreen({ role, setRole }){
+      return (
+        <div className="container">
+          <div className="card vstack">
+            <strong>Profile</strong>
+            <div className="vstack">
+              <label>Roles</label>
+              <div className="hstack" style={{flexWrap:"wrap", gap:"6px"}}>
+                {ROLES.map(r => <button key={r} className="pill" onClick={()=>setRole(r)}>{r}</button>)}
+              </div>
+            </div>
+            <div className="divider"></div>
+            <div className="vstack">
+              <Field label="Trade plate"><input type="file" /></Field>
+              <Field label="Insurance (optional)"><input type="file" /></Field>
+              <Field label="Payment or subscription"><select><option>Subscription</option><option>Per job</option></select></Field>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function PostScreen({ role }){
+      return (
+        <div className="container">
+          {role==="Driver" && <DriverPost />}
+          {role==="Low Loader" && <LowLoaderPost />}
+          {role==="Lift Seeker" && <SeekerPost />}
+          {role==="Business" && <BusinessPost />}
+        </div>
+      );
+    }
+
+    function App(){
+      const [role, setRole] = useState("Driver");
+      const [tab, setTab] = useState("Map");
+      const [showOffer, setShowOffer] = useState(false);
+
+      return (
+        <div>
+          <Header role={role} setRole={setRole} onOffer={()=>setShowOffer(true)} />
+          {tab==="Map" && <MapScreen />}
+          {tab==="Post" && <PostScreen role={role} />}
+          {tab==="Matches" && <MatchesScreen />}
+          {tab==="Inbox" && <InboxScreen />}
+          {tab==="Profile" && <ProfileScreen role={role} setRole={setRole} />}
+          <OfferModal open={showOffer} onClose={()=>setShowOffer(false)} />
+          <Tabs tab={tab} setTab={setTab} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
