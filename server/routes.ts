@@ -1224,6 +1224,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/lift-requests/requester/:requesterId", async (req, res) => {
+    try {
+      const { requesterId } = req.params;
+      const requests = await storage.getLiftRequestsByRequesterId(requesterId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Get requester lift requests error:", error);
+      res.status(500).json({ error: "Failed to get lift requests" });
+    }
+  });
+
   app.get("/api/lift-requests/:id", async (req, res) => {
     try {
       const { id } = req.params;
