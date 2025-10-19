@@ -74,16 +74,20 @@ function AppContent() {
     );
   }
 
-  // Show role selection if query loaded but no driver type is set
-  if (!userLoading && !driverType) {
+  // TEMPORARY: Always show role select for testing button functionality
+  const FORCE_SHOW_ROLE_SELECT = true; // Set to false when testing is complete
+  
+  // Show role selection if query loaded but no driver type is set (OR if forced for testing)
+  if ((!userLoading && !driverType) || FORCE_SHOW_ROLE_SELECT) {
     return (
       <div>
         <div className="bg-yellow-500 text-black p-2 text-xs">
-          DEBUG: No driverType found. User: {currentUserId}
+          DEBUG: RoleSelect forced for testing. Current driverType: {driverType || 'none'}
         </div>
         <RoleSelect
           userId={currentUserId}
           onRoleSelected={(type) => {
+            console.log("✅ Role selected callback triggered:", type);
             // Invalidate query to refetch user data after role selection
             queryClient.invalidateQueries({ queryKey: ["/api/users", currentUserId] });
           }}
