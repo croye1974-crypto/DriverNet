@@ -64,7 +64,11 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
-            onClick={() => selectRole("driver")}
+            onClick={() => {
+              console.log("🟠 DRIVER BUTTON CLICKED!");
+              alert("Driver button clicked!");
+              selectRole("driver");
+            }}
             className="w-full h-24 text-lg"
             variant="default"
             data-testid="button-select-driver"
@@ -76,7 +80,11 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
           </Button>
 
           <Button
-            onClick={() => selectRole("loader")}
+            onClick={() => {
+              console.log("🟠 LOADER BUTTON CLICKED!");
+              alert("Loader button clicked!");
+              selectRole("loader");
+            }}
             className="w-full h-24 text-lg"
             variant="destructive"
             data-testid="button-select-loader"
