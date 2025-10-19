@@ -137,3 +137,20 @@ The architecture maintains clear separation between frontend, backend, and share
   - Form validation with descriptive error messages
 - **Testing**: E2E Playwright tests verify role selection, persistence across reloads, check-in submission, space advertising, and data display
 - **Impact**: Expands DriveNet to support flatbed/low-loader operators, enabling vehicle transport coordination alongside ride-sharing for trade plate drivers
+
+### Four-Role Expansion: Driver, Lowloader, Liftseeker, Business (October 2025)
+- **Feature**: Expanded from 2 roles to 4 roles to support comprehensive transport marketplace
+- **New User Roles**:
+  - `driver` (existing): Trade plate car delivery drivers offering ride shares
+  - `lowloader` (existing): Flatbed/low-loader operators offering vehicle transport
+  - `liftseeker` (NEW): Passengers requesting rides between locations
+  - `business` (NEW): Companies booking bulk transport services (cargo/vehicles)
+- **Backward Compatibility**: Schema changes preserve existing `departureTime` and `requestedTime` fields while adding optional time window fields (`earliestDepart`, `latestArrive`)
+- **Enhanced Schema Changes**:
+  - **Users Table**: Added `paymentPreference` (subscription/payg/free), `tradePlateDoc`, `insuranceDoc` fields for compliance
+  - **Lift Offers**: Enhanced with time windows, detour tolerance (`maxDetourMiles`), pricing models (`priceType`, `pricePerMile/perSeat/flat`), vehicle types, visibility settings (`publicOffer`), repeat patterns (`repeatDays`)
+  - **Lift Requests**: Enhanced with time windows, `hasBagsKit` flag, `maxBudget`, what3words support, status tracking
+  - **Business Bookings**: New table for corporate bookings with vehicle details, pickup/delivery windows, equipment requirements
+- **Data Integrity**: All LSP errors resolved in storage.ts by ensuring optional fields use `null` instead of `undefined` (14 fixes applied)
+- **Storage Layer Updates**: All create methods in MemStorage updated to handle new nullable fields with explicit `?? null` coalescing
+- **Impact**: DriveNet now serves complete transport ecosystem - ride sharing (driver+liftseeker), vehicle transport (lowloader), and corporate logistics (business)

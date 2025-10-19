@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DriveNet Unified UI – Single File MVP</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f7f7f8; color:#111; }
+    header { position: sticky; top:0; background:#fff; border-bottom:1px solid #e6e6e9; padding:10px 12px; z-index:10; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .grow { flex:1; }
+    select, input, textarea, button { font: inherit; padding:10px; border:1px solid #d1d1d6; border-radius:10px; background:#fff; }
+    label { font-size:13px; color:#444; margin-bottom:6px; display:block; }
+    .container { padding:12px; max-width:960px; margin:0 auto; }
+    .card { background:#fff; border:1px solid #e6e6e9; border-radius:14px; padding:14px; margin-bottom:12px; }
+    .hstack { display:flex; gap:8px; align-items:center; }
+    .vstack { display:grid; gap:10px; }
+    .tabs { position: sticky; bottom:0; background:#fff; border-top:1px solid #e6e6e9; display:grid; grid-template-columns:repeat(5,1fr); }
+    .tab { text-align:center; padding:10px 0; font-size:14px; cursor:pointer; }
+    .tab.active { color:#0a7; font-weight:600; }
+    .btn { background:#0a7; color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; }
+    .btn.ghost { background:#fff; color:#111; border:1px solid #d1d1d6; }
+    .pill { border-radius:999px; padding:7px 10px; background:#eef8f4; color:#065; font-size:12px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .muted { color:#666; font-size:13px; }
+    .divider { height:1px; background:#eee; margin:8px 0 10px 0; }
+    .error { background:#ffe8e8; border:1px solid #ffbcbc; color:#a40000; padding:8px 12px; border-radius:10px; }
+    .ok { background:#e8fff2; border:1px solid #bcffd6; color:#004d2a; padding:8px 12px; border-radius:10px; }
+    .mapbox { height:240px; background: repeating-linear-gradient(45deg,#fafafa,#fafafa 10px,#f2f2f7 10px,#f2f2f7 20px); border:1px dashed #d9d9de; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#666; }
+    @media (max-width: 640px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    // This is a standalone demo UI for DriveNet unified interface
+    // Generated from user mockup - see attached_assets for full implementation
+    const { useState } = React;
+    const TABS = ["Map","Post","Matches","Inbox","Profile"];
+    const ROLES = ["Driver","Low Loader","Lift Seeker","Business"];
+    
+    function App() {
+      const [role, setRole] = useState("Driver");
+      const [tab, setTab] = useState("Map");
+      const [showOffer, setShowOffer] = useState(false);
+      
+      return (
+        <div>
+          <header>
+            <div className="row">
+              <select className="grow" value={role} onChange={e=>setRole(e.target.value)}>
+                {ROLES.map(r => <option key={r}>{r} mode</option>)}
+              </select>
+              <button className="btn" onClick={()=>setShowOffer(true)}>Offer lift</button>
+            </div>
+          </header>
+          <div className="container">
+            <div className="card">
+              <h3>DriveNet Unified Interface Demo</h3>
+              <p className="muted">This is a standalone mockup. See the full implementation in the main app.</p>
+              <p className="muted">Current mode: <strong>{role}</strong> | Tab: <strong>{tab}</strong></p>
+            </div>
+          </div>
+          <nav className="tabs">
+            {TABS.map(t => (
+              <div key={t} className={"tab "+(tab===t?"active":"")} onClick={()=>setTab(t)}>{t}</div>
+            ))}
+          </nav>
+        </div>
+      );
+    }
+    
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
