@@ -12,6 +12,9 @@ interface RoleSelectProps {
 
 export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) {
   const { toast } = useToast();
+  
+  // Log immediately when component mounts to verify it's rendering
+  console.log("🟣 RoleSelect component mounted. UserId:", userId);
 
   const selectRole = async (role: "driver" | "loader") => {
     try {
