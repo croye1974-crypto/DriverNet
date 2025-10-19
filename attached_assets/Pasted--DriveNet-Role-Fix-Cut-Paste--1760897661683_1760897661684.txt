@@ -1,0 +1,98 @@
+/* ============================
+   🚀 DriveNet Role Fix (Cut + Paste)
+   ============================ */
+
+// Make sure express.json() is active near the top of your server file
+import express from "express";
+const app = express();
+app.use(express.json());
+
+/* --- DIAGNOSTIC LOGGER --- */
+app.use((req, _res, next) => {
+  if (req.method === "POST" || req.method === "PUT") {
+    console.log(`[express][diag] ${req.method} ${req.path} body=`, req.body);
+  }
+  next();
+});
+
+/* --- SIMPLE IN-MEMORY USER STORE --- */
+const mem = {
+  users: [
+    {
+      id: "user-1",
+      username: "john_driver",
+      driverType: "driver" as "driver" | "low_loader",
+    },
+  ],
+};
+
+/* --- UNIVERSAL ROLE UPDATE HANDLER --- */
+const roleRoutes = ["/api/users/:id/driver-type", "/api/users/:id/driverType"];
+app.post(roleRoutes, handleSetDriverType);
+app.put(roleRoutes, handleSetDriverType);
+
+function handleSetDriverType(req: express.Request, res: express.Response) {
+  const { id } = req.params;
+  const driverType = (req.body?.driverType || req.body?.type) as
+    | "driver"
+    | "low_loader"
+    | undefined;
+
+  if (!driverType || !["driver", "low_loader"].includes(driverType)) {
+    console.log("[express] ❌ Invalid driverType payload:", req.body);
+    return res
+      .status(400)
+      .json({ error: 'Invalid driverType. Use "driver" or "low_loader".' });
+  }
+
+  let user = mem.users.find((u) => u.id === id);
+  if (!user) {
+    user = { id, username: id, driverType };
+    mem.users.push(user);
+  } else {
+    user.driverType = driverType;
+  }
+
+  console.log(`[express] ✅ driverType for ${id} set to ${driverType}`);
+  return res.json({ ok: true, user });
+}
+
+/* --- FRONTEND HELPER (OPTIONAL: Paste into your src/api/users.ts) --- */
+export async function setDriverType(userId: string, driverType: "driver" | "low_loader") {
+  const headers = { "Content-Type": "application/json", "Cache-Control": "no-store" };
+  const body = JSON.stringify({ driverType });
+
+  // Try kebab-case first
+  let res = await fetch(`/api/users/${userId}/driver-type`, {
+    method: "POST",
+    headers,
+    body,
+  });
+
+  if (!res.ok) {
+    // Retry camelCase if first route fails
+    res = await fetch(`/api/users/${userId}/driverType`, {
+      method: "POST",
+      headers,
+      body,
+    });
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+/* --- QUICK HEALTH CHECK ENDPOINT --- */
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+/* --- START SERVER (Only if not already present) --- */
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ DriveNet running on port ${PORT}`));
+
+/* ============================
+   ✅ END OF FIX
+   ============================ */

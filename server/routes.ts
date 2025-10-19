@@ -87,6 +87,14 @@ const aiSummarySchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // DIAGNOSTIC LOGGER - Log all POST/PUT requests with body
+  app.use((req, _res, next) => {
+    if (req.method === "POST" || req.method === "PUT") {
+      console.log(`[express][diag] ${req.method} ${req.path} body=`, req.body);
+    }
+    next();
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ ok: true });

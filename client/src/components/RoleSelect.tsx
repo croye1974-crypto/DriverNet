@@ -52,30 +52,56 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
         <CardContent className="space-y-4">
           <button
             type="button"
-            onClick={() => {
-              console.log("🟠 DRIVER BUTTON CLICKED!");
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("🟠 DRIVER BUTTON CLICKED (onClick)!");
               alert("Driver button clicked!");
               selectRole("driver");
             }}
-            className="w-full h-24 text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex flex-col items-center justify-center gap-2"
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              console.log("🟠 DRIVER BUTTON TOUCHED (onTouchEnd)!");
+              alert("Driver button touched!");
+              selectRole("driver");
+            }}
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              cursor: 'pointer',
+              touchAction: 'manipulation'
+            }}
+            className="w-full h-24 text-lg bg-blue-600 active:bg-blue-800 text-white font-semibold rounded-lg flex flex-col items-center justify-center gap-2"
             data-testid="button-select-driver"
           >
-            <Users className="w-8 h-8" />
-            <span>Individual Driver</span>
+            <Users className="w-8 h-8" style={{ pointerEvents: 'none' }} />
+            <span style={{ pointerEvents: 'none' }}>Individual Driver</span>
           </button>
 
           <button
             type="button"
-            onClick={() => {
-              console.log("🟠 LOADER BUTTON CLICKED!");
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("🟠 LOADER BUTTON CLICKED (onClick)!");
               alert("Loader button clicked!");
               selectRole("loader");
             }}
-            className="w-full h-24 text-lg bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg flex flex-col items-center justify-center gap-2"
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              console.log("🟠 LOADER BUTTON TOUCHED (onTouchEnd)!");
+              alert("Loader button touched!");
+              selectRole("loader");
+            }}
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              cursor: 'pointer',
+              touchAction: 'manipulation'
+            }}
+            className="w-full h-24 text-lg bg-red-600 active:bg-red-800 text-white font-semibold rounded-lg flex flex-col items-center justify-center gap-2"
             data-testid="button-select-loader"
           >
-            <Truck className="w-8 h-8" />
-            <span>Low-Loader Operator</span>
+            <Truck className="w-8 h-8" style={{ pointerEvents: 'none' }} />
+            <span style={{ pointerEvents: 'none' }}>Low-Loader Operator</span>
           </button>
         </CardContent>
       </Card>
