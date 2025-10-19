@@ -63,37 +63,33 @@ export default function RoleSelect({ userId, onRoleSelected }: RoleSelectProps) 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
+          <button
+            type="button"
             onClick={() => {
               console.log("🟠 DRIVER BUTTON CLICKED!");
               alert("Driver button clicked!");
               selectRole("driver");
             }}
-            className="w-full h-24 text-lg"
-            variant="default"
+            className="w-full h-24 text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex flex-col items-center justify-center gap-2"
             data-testid="button-select-driver"
           >
-            <div className="flex flex-col items-center gap-2">
-              <Users className="w-8 h-8" />
-              <span>Individual Driver</span>
-            </div>
-          </Button>
+            <Users className="w-8 h-8" />
+            <span>Individual Driver</span>
+          </button>
 
-          <Button
+          <button
+            type="button"
             onClick={() => {
               console.log("🟠 LOADER BUTTON CLICKED!");
               alert("Loader button clicked!");
               selectRole("loader");
             }}
-            className="w-full h-24 text-lg"
-            variant="destructive"
+            className="w-full h-24 text-lg bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg flex flex-col items-center justify-center gap-2"
             data-testid="button-select-loader"
           >
-            <div className="flex flex-col items-center gap-2">
-              <Truck className="w-8 h-8" />
-              <span>Low-Loader Operator</span>
-            </div>
-          </Button>
+            <Truck className="w-8 h-8" />
+            <span>Low-Loader Operator</span>
+          </button>
         </CardContent>
       </Card>
     </div>
