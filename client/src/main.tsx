@@ -2,17 +2,20 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(
-      (registration) => {
-        console.log('ServiceWorker registration successful:', registration.scope);
-      },
-      (error) => {
-        console.log('ServiceWorker registration failed:', error);
-      }
-    );
+// SERVICE WORKER DISABLED - UNREGISTERING OLD CACHE
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => {
+      registration.unregister();
+      console.log('🗑️ OLD Service Worker unregistered');
+    });
+  });
+  // Clear all caches
+  caches.keys().then((cacheNames) => {
+    cacheNames.forEach((cacheName) => {
+      caches.delete(cacheName);
+      console.log('🗑️ Cache deleted:', cacheName);
+    });
   });
 }
 
