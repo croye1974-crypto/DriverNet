@@ -57,9 +57,14 @@ function AppContent() {
     if (currentUser?.driverType) {
       const type = currentUser.driverType as "driver" | "loader";
       console.log("🟢 App.tsx - Setting driverType to:", type);
-      setDriverType(type);
-      setRenderKey(prev => prev + 1); // Force re-render
-      localStorage.setItem("driverType", type); // Cache for faster subsequent loads
+      
+      // Use setTimeout to ensure state update happens after render
+      setTimeout(() => {
+        setDriverType(type);
+        setRenderKey(prev => prev + 1); // Force re-render
+        localStorage.setItem("driverType", type); // Cache for faster subsequent loads
+        console.log("✅ driverType state updated asynchronously");
+      }, 0);
     } else {
       console.log("🔴 App.tsx - NO driverType in currentUser!");
     }
@@ -179,10 +184,21 @@ function AppContent() {
 }
 
 function App() {
+  const [appKey, setAppKey] = useState(0);
+  
+  // Force complete re-render when needed
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setAppKey(prev => prev + 1);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppContent />
+        <AppContent key={appKey} />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
